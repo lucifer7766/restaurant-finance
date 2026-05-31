@@ -1,28 +1,31 @@
 "use client";
 
 import { useMonthFilter } from "@/context/MonthFilterContext";
-import { formatMonthLabel, selectClassName } from "@/lib/utils";
+import { formatMonthLabel } from "@/lib/utils";
 
-const labelClassName = "mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300";
+const START_YEAR = 2025;
+const END_YEAR = 2030;
+
+const MIN_MONTH = `${START_YEAR}-01`;
+const MAX_MONTH = `${END_YEAR}-12`;
 
 export function MonthSelector() {
   const { selectedMonth, setSelectedMonth } = useMonthFilter();
 
   return (
-    <div className="max-w-xs">
-      <label htmlFor="month-filter" className={labelClassName}>
-        Month
-      </label>
+    <div className="flex flex-col items-end gap-0.5">
       <input
         id="month-filter"
         type="month"
-        min="2026-01"
-        max="2026-12"
+        min={MIN_MONTH}
+        max={MAX_MONTH}
         value={selectedMonth}
-        onChange={(event) => setSelectedMonth(event.target.value)}
-        className={selectClassName}
+        onChange={(e) => setSelectedMonth(e.target.value)}
+        className="bg-surface-container rounded-xl px-3 py-2 font-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary border-none cursor-pointer"
       />
-      <p className="mt-1 text-xs text-zinc-400">Showing {formatMonthLabel(selectedMonth)}</p>
+      <p className="font-label-caps text-label-caps text-on-surface-variant pr-1">
+        {formatMonthLabel(selectedMonth)}
+      </p>
     </div>
   );
 }

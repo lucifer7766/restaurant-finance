@@ -37,11 +37,18 @@ const monthNames = [
   "Dec",
 ] as const;
 
-export const defaultSelectedMonth = "2026-05";
+const now = new Date();
+export const defaultSelectedMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-export const availableMonths = monthNames.map(
-  (_, index) => `2026-${String(index + 1).padStart(2, "0")}`,
-);
+const AVAILABLE_START_YEAR = 2025;
+const AVAILABLE_END_YEAR = 2030;
+
+export const availableMonths: string[] = [];
+for (let y = AVAILABLE_START_YEAR; y <= AVAILABLE_END_YEAR; y++) {
+  for (let m = 1; m <= 12; m++) {
+    availableMonths.push(`${y}-${String(m).padStart(2, "0")}`);
+  }
+}
 
 function percentChange(current: number, previous: number): number {
   if (previous === 0) {
@@ -159,7 +166,7 @@ export function getMonthlyStatsFromTransactions(
 
 export function getRevenueHistoryFromTransactions(
   transactions: RecentTransaction[],
-  year = "2026",
+  year = String(new Date().getFullYear()),
 ): RevenuePoint[] {
   return monthNames.map((monthName, index) => {
     const monthKey = `${year}-${String(index + 1).padStart(2, "0")}`;

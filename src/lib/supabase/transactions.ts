@@ -109,8 +109,6 @@ export async function insertTransaction(transaction: NewTransaction): Promise<vo
   const supabase = getSupabaseClient();
   const payload = prepareInsertPayload(transaction);
 
-  console.log("Inserting transaction payload:", payload);
-
   const { error } = await supabase.from("transactions").insert(payload);
 
   if (error) {

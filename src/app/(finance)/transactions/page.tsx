@@ -1,11 +1,5 @@
-import TransactionsContent, {
-  TransactionsProvider,
-} from "@/components/transactions/TransactionsContent";
+import TransactionsContent from "@/components/transactions/TransactionsContent";
 
 export default function TransactionsPage() {
-  return (
-    <TransactionsProvider>
-      <TransactionsContent />
-    </TransactionsProvider>
-  );
+  return <TransactionsContent />;
 }

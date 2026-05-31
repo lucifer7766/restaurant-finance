@@ -52,6 +52,8 @@ function getText(transaction: AppTransaction) {
   return transaction.note || transaction.description || "-";
 }
 
+/* ─── Provider ─────────────────────────────────────────────────────────────── */
+
 export function TransactionsProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = useState<AppTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,6 +114,8 @@ export function useTransactions() {
   return context;
 }
 
+/* ─── TransactionsContent ──────────────────────────────────────────────────── */
+
 export function TransactionsContent() {
   const { transactions, isLoading, error, addTransaction, deleteTransaction, refreshTransactions } =
     useTransactions();
@@ -120,6 +124,7 @@ export function TransactionsContent() {
   const [typeFilter, setTypeFilter] = useState<"all" | TransactionType>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<AppTransaction | null>(null);
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
@@ -153,34 +158,50 @@ export function TransactionsContent() {
     const amount = Number(form.amount);
 
     if (!form.date || !form.category || !amount) {
-      alert("กรอกข้อมูลให้ครบก่อน");
+      setAddError("กรอกข้อมูลให้ครบก่อน");
       return;
     }
 
-    await addTransaction({
-      date: form.date,
-      type: form.type,
-      category: form.category,
-      amount,
-      note: form.note,
-    } as NewTransaction);
+    setAddError(null);
 
-    setForm({
-      date: new Date().toISOString().slice(0, 10),
-      type: "expense",
-      category: "",
-      amount: "",
-      note: "",
-    });
+    try {
+      await addTransaction({
+        date: form.date,
+        type: form.type,
+        category: form.category,
+        amount,
+        note: form.note,
+      } as NewTransaction);
 
-    setIsAddOpen(false);
+      setForm({
+        date: new Date().toISOString().slice(0, 10),
+        type: "expense",
+        category: "",
+        amount: "",
+        note: "",
+      });
+
+      setIsAddOpen(false);
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ กรุณาลองใหม่");
+    }
+  }
+
+  function openAddModal(type: TransactionType) {
+    setAddError(null);
+    setForm((prev) => ({ ...prev, type }));
+    setIsAddOpen(true);
   }
 
   async function handleDelete(id: string) {
     const ok = confirm("ต้องการลบรายการนี้ใช่ไหม?");
     if (!ok) return;
 
-    await deleteTransaction(id);
+    try {
+      await deleteTransaction(id);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "ลบไม่สำเร็จ กรุณาลองใหม่");
+    }
   }
 
   function getExportRows() {
@@ -207,17 +228,15 @@ export function TransactionsContent() {
       .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
       .join("\n");
 
-    const blob = new Blob(["\uFEFF" + csvContent], {
+    const blob = new Blob(["﻿" + csvContent], {
       type: "text/csv;charset=utf-8;",
     });
 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-
     link.href = url;
     link.download = `restaurant-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-
     URL.revokeObjectURL(url);
   }
 
@@ -235,208 +254,421 @@ export function TransactionsContent() {
     ];
 
     XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
-
     XLSX.writeFile(
       workbook,
       `restaurant-transactions-${new Date().toISOString().slice(0, 10)}.xlsx`
     );
   }
 
+  /* ── Derived summary from filteredTransactions ── */
+  const summaryIncome = filteredTransactions
+    .filter((t) => t.type === "income")
+    .reduce((s, t) => s + t.amount, 0);
+
+  const summaryExpense = filteredTransactions
+    .filter((t) => t.type === "expense")
+    .reduce((s, t) => s + t.amount, 0);
+
+  const summaryNet = summaryIncome - summaryExpense;
+
+  /* ── Tab labels ── */
+  const tabs: { value: "all" | TransactionType; label: string }[] = [
+    { value: "all", label: "ทั้งหมด" },
+    { value: "income", label: "รายรับ" },
+    { value: "expense", label: "รายจ่าย" },
+  ];
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     JSX
+  ════════════════════════════════════════════════════════════════════════════ */
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="space-y-stack-md">
+      {/* ── Header row ─────────────────────────────────────────────────────── */}
+      <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-white">Transactions</h2>
-          <p className="text-sm text-zinc-400">จัดการรายรับรายจ่ายทั้งหมด</p>
+          <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">
+            รายการทั้งหมด
+          </h2>
+          <p className="font-body-md text-on-surface-variant">
+            จัดการรายรับและรายจ่าย
+          </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Export buttons */}
           <button
             onClick={handleExportCSV}
-            className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-outline-variant font-body-md text-on-surface-variant hover:bg-surface-container transition-all"
           >
-            Export CSV
+            <span className="material-symbols-outlined text-[18px]">download</span>
+            CSV
           </button>
 
           <button
             onClick={handleExportExcel}
-            className="rounded-lg border border-emerald-700 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-900/30"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-primary font-body-md text-primary hover:bg-primary-container/20 transition-all"
           >
-            Export Excel
+            <span className="material-symbols-outlined text-[18px]">table_view</span>
+            Excel
+          </button>
+
+          {/* Add buttons */}
+          <button
+            onClick={() => openAddModal("income")}
+            className="flex items-center gap-2 bg-primary text-on-primary px-5 py-2.5 rounded-xl font-body-md hover:opacity-90 transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            เพิ่มรายรับ
           </button>
 
           <button
-            onClick={() => setIsAddOpen(true)}
-            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-black hover:bg-emerald-400"
+            onClick={() => openAddModal("expense")}
+            className="flex items-center gap-2 bg-primary-container text-on-primary-container px-5 py-2.5 rounded-xl font-body-md hover:opacity-90 transition-all shadow-sm"
           >
-            + Add Transaction
+            <span className="material-symbols-outlined text-[18px]">remove_circle</span>
+            เพิ่มรายจ่าย
           </button>
+        </div>
+      </section>
+
+      {/* ── Summary cards ──────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-gutter">
+        <div className="metric-card p-6 rounded-2xl border border-surface-variant">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">
+            รายรับรวม
+          </span>
+          <div className="flex items-baseline gap-1.5 text-primary">
+            <span className="text-lg font-bold opacity-70">฿</span>
+            <span className="text-2xl font-bold font-headline-md">
+              {summaryIncome.toLocaleString("th-TH")}
+            </span>
+          </div>
+        </div>
+
+        <div className="metric-card p-6 rounded-2xl border border-surface-variant">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">
+            รายจ่ายรวม
+          </span>
+          <div className="flex items-baseline gap-1.5 text-error">
+            <span className="text-lg font-bold opacity-70">฿</span>
+            <span className="text-2xl font-bold font-headline-md">
+              {summaryExpense.toLocaleString("th-TH")}
+            </span>
+          </div>
+        </div>
+
+        <div className="metric-card p-6 rounded-2xl border border-surface-variant">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">
+            กำไรสุทธิ
+          </span>
+          <div
+            className={`flex items-baseline gap-1.5 ${summaryNet >= 0 ? "text-primary" : "text-error"}`}
+          >
+            <span className="text-lg font-bold opacity-70">฿</span>
+            <span className="text-2xl font-bold font-headline-md">
+              {Math.abs(summaryNet).toLocaleString("th-TH")}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search..."
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none"
-        />
+      {/* ── Error banner ───────────────────────────────────────────────────── */}
+      {error && (
+        <div className="sand-card p-4 rounded-xl flex items-center gap-3 border-l-4 border-error">
+          <span className="material-symbols-outlined text-error">error</span>
+          <p className="font-body-md text-on-surface">{error}</p>
+        </div>
+      )}
 
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as "all" | TransactionType)}
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none"
-        >
-          <option value="all">All types</option>
-          <option value="income">Income</option>
-          <option value="expense">Expense</option>
-        </select>
+      {/* ── Filter bar ─────────────────────────────────────────────────────── */}
+      <div className="metric-card p-4 rounded-2xl border border-surface-variant flex flex-col gap-4 md:flex-row md:items-center">
+        {/* Type tabs */}
+        <div className="flex rounded-xl bg-surface-container p-1 gap-1 shrink-0">
+          {tabs.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setTypeFilter(tab.value)}
+              className={`px-4 py-2 rounded-lg font-body-md transition-all ${
+                typeFilter === tab.value
+                  ? "bg-surface-container-lowest text-on-surface shadow-sm font-semibold"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
+        {/* Search */}
+        <div className="flex items-center gap-2 flex-1 bg-surface-container rounded-xl px-3 py-2">
+          <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
+            search
+          </span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ค้นหารายการ..."
+            className="flex-1 bg-transparent font-body-md text-on-surface placeholder:text-on-surface-variant outline-none"
+          />
+        </div>
+
+        {/* Category filter */}
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none"
+          className="bg-surface-container rounded-xl px-3 py-2.5 font-body-md text-on-surface outline-none border-none"
         >
-          <option value="all">All categories</option>
-          {categories.map((category) => (
-            <option key={category} value={category}>
-              {category}
+          <option value="all">ทุกหมวดหมู่</option>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
             </option>
           ))}
         </select>
       </div>
 
-      {error ? (
-        <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
-          {error}
-        </div>
-      ) : null}
-
-      <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-zinc-800 bg-zinc-900 text-zinc-300">
-            <tr>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Description</th>
-              <th className="px-4 py-3">Category</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3 text-right">Amount</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-zinc-400">
-                  Loading transactions...
-                </td>
-              </tr>
-            ) : filteredTransactions.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-zinc-400">
-                  No transactions found
-                </td>
-              </tr>
-            ) : (
-              filteredTransactions.map((item) => (
-                <tr key={item.id} className="border-b border-zinc-900 text-zinc-200">
-                  <td className="px-4 py-3">{item.date}</td>
-                  <td className="px-4 py-3">{getText(item)}</td>
-                  <td className="px-4 py-3">{item.category}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={
-                        item.type === "income"
-                          ? "rounded-full bg-emerald-500/10 px-2 py-1 text-xs text-emerald-300"
-                          : "rounded-full bg-red-500/10 px-2 py-1 text-xs text-red-300"
-                      }
-                    >
-                      {item.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right font-medium">{formatBaht(item.amount)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => setEditingTransaction(item)}
-                      className="mr-3 text-xs text-blue-400 hover:underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="text-xs text-red-400 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
+      {/* ── Transactions table ─────────────────────────────────────────────── */}
+      <section className="metric-card rounded-2xl border border-surface-variant overflow-hidden">
+        {isLoading ? (
+          <div className="p-10 text-center font-body-md text-on-surface-variant">
+            กำลังโหลด...
+          </div>
+        ) : filteredTransactions.length === 0 ? (
+          <div className="p-10 text-center font-body-md text-on-surface-variant">
+            ไม่พบรายการ
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-surface-variant text-left">
+                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">
+                    วันที่
+                  </th>
+                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">
+                    รายละเอียด
+                  </th>
+                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">
+                    หมวดหมู่
+                  </th>
+                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">
+                    ประเภท
+                  </th>
+                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">
+                    จำนวนเงิน
+                  </th>
+                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">
+                    จัดการ
+                  </th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
 
-      {isAddOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 text-black shadow-xl">
-            <h3 className="mb-4 text-lg font-semibold">Add Transaction</h3>
+              <tbody>
+                {filteredTransactions.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-b border-surface-variant last:border-0 hover:bg-surface-container-low transition-colors"
+                  >
+                    <td className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">
+                      {item.date}
+                    </td>
+                    <td className="px-6 py-4 font-body-md text-on-surface max-w-[200px] truncate">
+                      {getText(item)}
+                    </td>
+                    <td className="px-6 py-4 font-body-md text-on-surface-variant">
+                      {item.category || "-"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full font-label-caps text-label-caps ${
+                          item.type === "income"
+                            ? "bg-primary-container text-on-primary-container"
+                            : "bg-error-container text-on-error-container"
+                        }`}
+                      >
+                        {item.type === "income" ? "รายรับ" : "รายจ่าย"}
+                      </span>
+                    </td>
+                    <td
+                      className={`px-6 py-4 text-right font-price-table text-price-table ${
+                        item.type === "income" ? "text-primary" : "text-error"
+                      }`}
+                    >
+                      {item.type === "income" ? "+" : "-"}
+                      {formatBaht(item.amount)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setEditingTransaction(item)}
+                          className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors"
+                          title="แก้ไข"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="p-1.5 rounded-lg text-error hover:bg-error-container transition-colors"
+                          title="ลบ"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
-            <div className="space-y-3">
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className="w-full rounded-lg border px-3 py-2 text-sm"
-              />
-
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as TransactionType })}
-                className="w-full rounded-lg border px-3 py-2 text-sm"
+      {/* ── Add Transaction Modal ──────────────────────────────────────────── */}
+      {isAddOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-surface w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+            {/* Modal header */}
+            <div className="p-6 border-b border-surface-variant flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    form.type === "income"
+                      ? "bg-primary text-on-primary"
+                      : "bg-primary-container text-on-primary-container"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {form.type === "income" ? "add_circle" : "remove_circle"}
+                  </span>
+                </div>
+                <h3 className="font-headline-md text-headline-md text-on-surface">
+                  {form.type === "income" ? "เพิ่มรายรับ" : "เพิ่มรายจ่าย"}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAddOpen(false)}
+                className="material-symbols-outlined p-2 hover:bg-surface-variant rounded-full text-on-surface-variant"
               >
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-              </select>
-
-              <input
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                placeholder="Category"
-                className="w-full rounded-lg border px-3 py-2 text-sm"
-              />
-
-              <input
-                type="number"
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                placeholder="Amount"
-                className="w-full rounded-lg border px-3 py-2 text-sm"
-              />
-
-              <textarea
-                value={form.note}
-                onChange={(e) => setForm({ ...form, note: e.target.value })}
-                placeholder="Note"
-                className="w-full rounded-lg border px-3 py-2 text-sm"
-              />
+                close
+              </button>
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setIsAddOpen(false)} className="rounded-lg border px-4 py-2 text-sm">
-                Cancel
+            {/* Modal body */}
+            <div className="p-6 space-y-4">
+              {addError && (
+                <div className="flex items-center gap-2 p-3 bg-error-container rounded-xl">
+                  <span className="material-symbols-outlined text-error text-[18px]">error</span>
+                  <p className="font-body-md text-on-error-container">{addError}</p>
+                </div>
+              )}
+              {/* Type toggle inside modal */}
+              <div className="flex rounded-xl bg-surface-container p-1 gap-1">
+                <button
+                  onClick={() => setForm((f) => ({ ...f, type: "income" }))}
+                  className={`flex-1 py-2 rounded-lg font-body-md transition-all ${
+                    form.type === "income"
+                      ? "bg-primary text-on-primary shadow-sm"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                >
+                  รายรับ
+                </button>
+                <button
+                  onClick={() => setForm((f) => ({ ...f, type: "expense" }))}
+                  className={`flex-1 py-2 rounded-lg font-body-md transition-all ${
+                    form.type === "expense"
+                      ? "bg-primary-container text-on-primary-container shadow-sm"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                >
+                  รายจ่าย
+                </button>
+              </div>
+
+              <div>
+                <label className="block font-label-caps text-label-caps text-on-surface-variant mb-2">
+                  วันที่ <span className="text-error">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                  className="w-full bg-secondary-container rounded-xl px-4 py-3 font-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-label-caps text-label-caps text-on-surface-variant mb-2">
+                  หมวดหมู่ <span className="text-error">*</span>
+                </label>
+                <input
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  placeholder="เช่น วัตถุดิบ, ค่าแรง, รายได้จากขาย"
+                  list="category-suggestions"
+                  className="w-full bg-secondary-container rounded-xl px-4 py-3 font-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant"
+                />
+                <datalist id="category-suggestions">
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div>
+                <label className="block font-label-caps text-label-caps text-on-surface-variant mb-2">
+                  จำนวนเงิน (฿) <span className="text-error">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-body-md text-on-surface-variant">
+                    ฿
+                  </span>
+                  <input
+                    type="number"
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    className="w-full bg-secondary-container rounded-xl px-4 py-3 pl-8 font-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-label-caps text-label-caps text-on-surface-variant mb-2">
+                  หมายเหตุ
+                </label>
+                <textarea
+                  value={form.note}
+                  onChange={(e) => setForm({ ...form, note: e.target.value })}
+                  placeholder="รายละเอียดเพิ่มเติม..."
+                  rows={2}
+                  className="w-full bg-secondary-container rounded-xl px-4 py-3 font-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Modal footer */}
+            <div className="p-6 border-t border-surface-variant flex justify-end gap-3">
+              <button
+                onClick={() => setIsAddOpen(false)}
+                className="px-6 py-2.5 rounded-xl font-body-md text-on-surface-variant hover:bg-surface-variant transition-colors"
+              >
+                ยกเลิก
               </button>
               <button
                 onClick={handleAddTransaction}
-                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-black"
+                className="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-body-md hover:opacity-90 transition-all"
               >
-                Save
+                บันทึก
               </button>
             </div>
           </div>
         </div>
-      ) : null}
+      )}
 
+      {/* ── Edit Modal (unchanged) ─────────────────────────────────────────── */}
       <EditTransactionModal
         transaction={
           editingTransaction
