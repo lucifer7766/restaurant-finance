@@ -1,3 +1,5 @@
-export default function TransactionsPage() {
-  return <div>Transactions page loading</div>;
+import { redirect } from "next/navigation";
+
+export default function HomePage() {
+  redirect("/dashboard");
 }
