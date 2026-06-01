@@ -53,25 +53,77 @@ export function ExpenseContent() {
     category: null, note: null, confidence: "unreadable",
   };
 
+  /** Compress image via canvas — max 900px wide, quality 0.55, output JPEG */
+  async function compressImage(file: File): Promise<{ base64: string; mimeType: string }> {
+    return new Promise((resolve, reject) => {
+      console.log("[compress] original size:", (file.size / 1024).toFixed(1), "KB");
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX_W = 900;
+        let { width, height } = img;
+        console.log("[compress] original dimensions:", width, "x", height);
+        if (width > MAX_W) {
+          height = Math.round((height * MAX_W) / width);
+          width = MAX_W;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("canvas not supported")); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.55);
+        const b64 = dataUrl.split(",")[1] ?? "";
+        const compressedKB = Math.ceil((b64.length * 3) / 4) / 1024;
+        console.log("[compress] compressed size:", compressedKB.toFixed(1), "KB", "| dimensions:", width, "x", height);
+        resolve({ base64: b64, mimeType: "image/jpeg" });
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
+  const MAX_BYTES = 1.4 * 1024 * 1024; // 1.4 MB safe limit
+
   async function handleReceiptFile(file: File) {
     setReceiptFile(file);
     setScanning(true);
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          // strip "data:image/...;base64," prefix
-          resolve(result.split(",")[1] ?? "");
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      let base64: string;
+      let mimeType: string;
+
+      if (file.type === "application/pdf") {
+        // PDF — read as-is
+        base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).split(",")[1] ?? "");
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        mimeType = "application/pdf";
+      } else {
+        // Image — compress first
+        const compressed = await compressImage(file);
+        base64 = compressed.base64;
+        mimeType = compressed.mimeType;
+      }
+
+      // Guard: still too large → open modal with fallback
+      const byteSize = Math.ceil((base64.length * 3) / 4);
+      if (byteSize > MAX_BYTES) {
+        setScanResult(FALLBACK_RESULT);
+        setScanning(false);
+        setModalOpen(true);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
 
       const res = await fetch("/api/scan-receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64, mimeType: file.type }),
+        body: JSON.stringify({ image: base64, mimeType }),
       });
 
       const data: ScanResult = res.ok ? await res.json() : FALLBACK_RESULT;
@@ -81,7 +133,6 @@ export function ExpenseContent() {
     } finally {
       setScanning(false);
       setModalOpen(true);
-      // reset file input so same file can be reselected
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
