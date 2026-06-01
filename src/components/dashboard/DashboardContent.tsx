@@ -337,7 +337,7 @@ export function DashboardContent() {
         ) : (
           <>
             <div className="mt-5 divide-y divide-surface-container-low">
-              {selectedMonthTransactions.slice(0, 8).map((tx) => (
+              {selectedMonthTransactions.slice(0, 5).map((tx) => (
                 <div key={tx.id} className="px-7 py-4 flex items-center gap-4 hover:bg-surface-container-low transition-colors">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                     tx.type === "income" ? "bg-primary-container" : "bg-error-container"
