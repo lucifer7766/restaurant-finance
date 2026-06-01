@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import { useMonthFilter } from "@/context/MonthFilterContext";
@@ -41,7 +42,9 @@ export function ExpenseContent() {
   const { transactions, isLoading, error, addTransaction, deleteTransaction, refreshTransactions } = useTransactions();
   const { selectedMonth } = useMonthFilter();
 
+  const searchParams = useSearchParams();
   const [showAll, setShowAll] = useState(false);
+  useEffect(() => { if (searchParams.get("view") === "all") setShowAll(true); }, [searchParams]);
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
   const [page, setPage] = useState(0);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);

@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import { ExpenseContent } from "@/components/expense/ExpenseContent";
 
 export default function ExpensePage() {
-  return <ExpenseContent />;
+  return <Suspense><ExpenseContent /></Suspense>;
 }

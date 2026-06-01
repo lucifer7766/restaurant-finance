@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import { useMonthFilter } from "@/context/MonthFilterContext";
@@ -40,7 +41,9 @@ export function IncomeContent() {
   const [posFile, setPosFile] = useState<File | null>(null);
   const { selectedMonth } = useMonthFilter();
 
+  const searchParams = useSearchParams();
   const [showAll, setShowAll] = useState(false);
+  useEffect(() => { if (searchParams.get("view") === "all") setShowAll(true); }, [searchParams]);
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
   const [page, setPage] = useState(0);
   const [editingTx, setEditingTx] = useState<Parameters<typeof EditTransactionModal>[0]["transaction"]>(null);

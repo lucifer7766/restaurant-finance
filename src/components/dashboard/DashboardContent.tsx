@@ -362,12 +362,18 @@ export function DashboardContent() {
                 </div>
               ))}
             </div>
-            <div className="p-5 border-t border-surface-container-low">
+            <div className="p-5 border-t border-surface-container-low flex gap-3">
               <Link
-                href="/transactions"
-                className="block w-full text-center py-3 rounded-xl bg-surface-container font-body-md text-on-surface-variant hover:bg-surface-container-high transition-colors"
+                href="/income?view=all"
+                className="flex-1 text-center py-3 rounded-xl bg-surface-container font-body-md text-on-surface-variant hover:bg-surface-container-high transition-colors"
               >
-                ดูรายการทั้งหมด
+                รายรับทั้งหมด
+              </Link>
+              <Link
+                href="/expense?view=all"
+                className="flex-1 text-center py-3 rounded-xl bg-surface-container font-body-md text-on-surface-variant hover:bg-surface-container-high transition-colors"
+              >
+                รายจ่ายทั้งหมด
               </Link>
             </div>
           </>
