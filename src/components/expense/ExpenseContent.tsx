@@ -330,8 +330,8 @@ export function ExpenseContent() {
                       </span>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-semibold text-sm text-on-surface whitespace-nowrap">
-                        ฿{tx.amount.toLocaleString("th-TH")}
+                      <p className="font-semibold text-sm text-error whitespace-nowrap">
+                        -฿{tx.amount.toLocaleString("th-TH")}
                       </p>
                     </div>
                   </div>
@@ -375,8 +375,8 @@ export function ExpenseContent() {
                             {tx.description || getCategoryLabel(tx.category)}
                           </span>
                         </div>
-                        <p className="font-semibold text-sm text-on-surface whitespace-nowrap text-right">
-                          ฿{tx.amount.toLocaleString("th-TH")}
+                        <p className="font-semibold text-sm text-error whitespace-nowrap text-right">
+                          -฿{tx.amount.toLocaleString("th-TH")}
                         </p>
                       </div>
                       <div className="flex items-center gap-1 px-3 border-l border-surface-container-low shrink-0">
