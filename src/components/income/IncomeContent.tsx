@@ -9,6 +9,12 @@ import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
 
+function getPrevMonth(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  const d = new Date(y, m - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function formatBaht(amount: number) {
   return `฿${Number(amount || 0).toLocaleString("th-TH", {
     minimumFractionDigits: 0,
@@ -71,14 +77,27 @@ export function IncomeContent() {
   }, [selectedMonth]);
   const dailyAvg = daysInMonth > 0 ? totalIncome / daysInMonth : 0;
 
+  const prevMonthIncome = useMemo(
+    () => filterTransactionsByMonth(allIncome, getPrevMonth(selectedMonth)),
+    [allIncome, selectedMonth]
+  );
+
+  const prevTotalIncome = useMemo(
+    () => prevMonthIncome.reduce((s, t) => s + t.amount, 0),
+    [prevMonthIncome]
+  );
+
   const paymentBreakdown = useMemo(() => {
-    return PAYMENT_METHODS.map(({ key }) => ({
-      key,
-      amount: monthIncome
+    return PAYMENT_METHODS.map(({ key }) => {
+      const amount = monthIncome
         .filter((t) => (t.category || "").includes(key) || (t.description || "").includes(key))
-        .reduce((s, t) => s + t.amount, 0),
-    }));
-  }, [monthIncome]);
+        .reduce((s, t) => s + t.amount, 0);
+      const prevAmount = prevMonthIncome
+        .filter((t) => (t.category || "").includes(key) || (t.description || "").includes(key))
+        .reduce((s, t) => s + t.amount, 0);
+      return { key, amount, prevAmount };
+    });
+  }, [monthIncome, prevMonthIncome]);
 
   const categoryBreakdown = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -183,16 +202,24 @@ export function IncomeContent() {
           {PAYMENT_METHODS.map(({ key, icon, bg, iconColor }) => {
             const item = paymentBreakdown.find((p) => p.key === key);
             const amount = item?.amount ?? 0;
+            const prevAmount = item?.prevAmount ?? 0;
             const pct = totalIncome > 0 ? Math.round((amount / totalIncome) * 100) : 0;
+            const hasPrev = prevAmount > 0;
+            const trend = hasPrev ? Math.round(((amount - prevAmount) / prevAmount) * 100) : 0;
             return (
               <div key={key} className="metric-card p-6 rounded-2xl">
                 <div className="flex items-start justify-between mb-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bg}`}>
                     <span className={`material-symbols-outlined text-[20px] ${iconColor}`}>{icon}</span>
                   </div>
-                  <span className="text-xs font-medium tracking-normal text-on-surface-variant">
-                    {pct}% ของรายรับ
-                  </span>
+                  <div className="text-right">
+                    <p className="text-xs font-medium tracking-normal text-on-surface-variant">{pct}% ของรายรับทั้งหมด</p>
+                    {hasPrev && (
+                      <p className={`text-xs font-medium tracking-normal ${trend >= 0 ? "text-primary" : "text-error"}`}>
+                        {trend >= 0 ? "+" : ""}{trend}% จากเดือนก่อน
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm font-medium text-on-surface-variant mb-1">{key}</p>
                 <div className="flex items-baseline gap-1 text-on-surface">

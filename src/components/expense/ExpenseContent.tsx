@@ -27,13 +27,10 @@ function getCategoryMeta(category: string) {
     : { icon: "receipt_long", iconColor: "text-on-surface-variant", bg: "bg-surface-container-high" };
 }
 
-function getBadgeMeta(category: string): { text: string; textColor: string } {
-  if (category.includes("วัตถุดิบ")) return { text: "+12% จากเดือนก่อน", textColor: "text-on-surface-variant" };
-  if (category.includes("ค่าแรง"))   return { text: "คงที่",              textColor: "text-on-surface-variant" };
-  if (category.includes("ค่าเช่า"))  return { text: "ราคาคงที่",          textColor: "text-on-surface-variant" };
-  if (category.includes("ไฟฟ้า"))    return { text: "-5% ประหยัดพลังงาน", textColor: "text-primary" };
-  if (category.includes("การตลาด"))  return { text: "ผันแปร",             textColor: "text-on-surface-variant" };
-  return { text: "เดือนนี้",          textColor: "text-on-surface-variant" };
+function getPrevMonth(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  const d = new Date(y, m - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
 const PAGE_SIZE = 10;
@@ -160,6 +157,20 @@ export function ExpenseContent() {
     [monthExpenses]
   );
 
+  const prevMonthExpenses = useMemo(
+    () => filterTransactionsByMonth(allExpenses, getPrevMonth(selectedMonth)),
+    [allExpenses, selectedMonth]
+  );
+
+  const prevCategoryTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    prevMonthExpenses.forEach((t) => {
+      const cat = t.category || "อื่นๆ";
+      totals[cat] = (totals[cat] ?? 0) + t.amount;
+    });
+    return totals;
+  }, [prevMonthExpenses]);
+
   const categoryBreakdown = useMemo(() => {
     const totals: Record<string, number> = {};
     monthExpenses.forEach((t) => {
@@ -271,17 +282,25 @@ export function ExpenseContent() {
         <div className="space-y-3">
           {categoryBreakdown.map(({ category, amount }) => {
             const meta = getCategoryMeta(category);
-            const badge = getBadgeMeta(category);
+            const pct = totalExpense > 0 ? Math.round((amount / totalExpense) * 100) : 0;
+            const prevAmt = prevCategoryTotals[category] ?? 0;
+            const hasPrev = prevAmt > 0;
+            const trend = hasPrev ? Math.round(((amount - prevAmt) / prevAmt) * 100) : 0;
             return (
               <div key={category} className="metric-card p-6 rounded-2xl">
-                {/* Top row: icon + badge */}
+                {/* Top row: icon + stats */}
                 <div className="flex items-start justify-between mb-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${meta.bg}`}>
                     <span className={`material-symbols-outlined text-[20px] ${meta.iconColor}`}>{meta.icon}</span>
                   </div>
-                  <span className={`text-xs font-medium tracking-normal ${badge.textColor}`}>
-                    {badge.text}
-                  </span>
+                  <div className="text-right">
+                    <p className="text-xs font-medium tracking-normal text-on-surface-variant">{pct}% ของรายจ่ายทั้งหมด</p>
+                    {hasPrev && (
+                      <p className={`text-xs font-medium tracking-normal ${trend >= 0 ? "text-error" : "text-primary"}`}>
+                        {trend >= 0 ? "+" : ""}{trend}% จากเดือนก่อน
+                      </p>
+                    )}
+                  </div>
                 </div>
                 {/* Category name */}
                 <p className="text-sm font-medium text-on-surface-variant mb-1">
