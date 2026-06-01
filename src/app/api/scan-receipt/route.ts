@@ -121,6 +121,7 @@ export async function POST(req: NextRequest) {
 
     if (!geminiRes.ok) {
       console.error("Gemini API error:", geminiRes.status);
+      console.error("Gemini API error body:", await geminiRes.text());
       return NextResponse.json(FALLBACK, { status: 200 });
     }
 
