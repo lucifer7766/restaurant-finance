@@ -66,23 +66,60 @@ function extractAmount(text: string): number | null {
   return null;
 }
 
-/** Extract date — looks for dd/mm/yyyy, dd-mm-yyyy, yyyy-mm-dd patterns */
+const EN_MONTHS: Record<string, string> = {
+  jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",
+  jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12",
+};
+const TH_MONTHS: Record<string, string> = {
+  มกราคม:"01",กุมภาพันธ์:"02",มีนาคม:"03",เมษายน:"04",
+  พฤษภาคม:"05",มิถุนายน:"06",กรกฎาคม:"07",สิงหาคม:"08",
+  กันยายน:"09",ตุลาคม:"10",พฤศจิกายน:"11",ธันวาคม:"12",
+  "ม.ค.":"01","ก.พ.":"02","มี.ค.":"03","เม.ย.":"04",
+  "พ.ค.":"05","มิ.ย.":"06","ก.ค.":"07","ส.ค.":"08",
+  "ก.ย.":"09","ต.ค.":"10","พ.ย.":"11","ธ.ค.":"12",
+};
+
+function beToce(year: number): number {
+  return year > 2400 ? year - 543 : year;
+}
+
+/** Extract date — supports dd/mm/yyyy, dd-mm-yyyy, yyyy-mm-dd, dd Mon yyyy, dd เดือน yyyy */
 function extractDate(text: string): string | null {
   const today = new Date().toISOString().slice(0, 10);
 
-  // yyyy-mm-dd
+  // yyyy-mm-dd or yyyy/mm/dd (may be BE year)
   const iso = text.match(/(\d{4})[-/](\d{2})[-/](\d{2})/);
-  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  if (iso) {
+    const year = beToce(parseInt(iso[1]));
+    return `${year}-${iso[2]}-${iso[3]}`;
+  }
 
   // dd/mm/yyyy or dd-mm-yyyy
   const dmy = text.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})/);
   if (dmy) {
     const y = dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3];
-    const m = dmy[2].padStart(2, "0");
-    const d = dmy[1].padStart(2, "0");
-    // Convert Buddhist year if > 2400
-    const year = parseInt(y) > 2400 ? parseInt(y) - 543 : parseInt(y);
-    return `${year}-${m}-${d}`;
+    const year = beToce(parseInt(y));
+    return `${year}-${dmy[2].padStart(2,"0")}-${dmy[1].padStart(2,"0")}`;
+  }
+
+  // dd Mon yyyy — e.g. "25 Aug 2562" or "25 August 2019"
+  const enMon = text.match(/(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})/);
+  if (enMon) {
+    const mo = EN_MONTHS[enMon[2].toLowerCase().slice(0,3)];
+    if (mo) {
+      const year = beToce(parseInt(enMon[3]));
+      return `${year}-${mo}-${enMon[1].padStart(2,"0")}`;
+    }
+  }
+
+  // dd เดือนไทย yyyy — e.g. "25 สิงหาคม 2562" or "25 ส.ค. 2562"
+  for (const [thName, mo] of Object.entries(TH_MONTHS)) {
+    const re = new RegExp(`(\\d{1,2})\\s*${thName}\\s*(\\d{4})`);
+    const m = text.match(re);
+    if (m) {
+      const year = beToce(parseInt(m[2]));
+      return `${year}-${mo}-${m[1].padStart(2,"0")}`;
+    }
   }
 
   return today;
