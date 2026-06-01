@@ -181,7 +181,8 @@ export function ReceiptScanModal({ open, onClose, onConfirm, initialData }: Prop
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 py-3 rounded-xl bg-primary text-on-primary font-body-md font-semibold hover:opacity-90 transition-opacity"
+            disabled={!amount || Number(amount) <= 0}
+            className="flex-1 py-3 rounded-xl bg-primary text-on-primary font-body-md font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
             ยืนยันบันทึกรายจ่าย
           </button>
