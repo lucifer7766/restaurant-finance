@@ -233,6 +233,26 @@ export function ExpenseContent() {
         </div>
       )}
 
+      {/* ── Total Expense Summary ───────────────────────────── */}
+      {isLoading ? (
+        <div className="metric-card rounded-2xl p-7 animate-pulse">
+          <div className="h-3 bg-surface-container-highest rounded w-1/3 mb-5" />
+          <div className="h-14 bg-surface-container-highest rounded w-2/3" />
+        </div>
+      ) : (
+        <div className="metric-card p-7 rounded-2xl">
+          <span className="text-xs font-medium text-on-surface-variant block mb-4 tracking-normal">
+            รวมรายจ่ายทั้งหมด
+          </span>
+          <div className="flex items-baseline gap-2 text-error">
+            <span className="text-4xl font-bold opacity-50">฿</span>
+            <span className="font-display-currency text-display-currency tracking-tight leading-none">
+              {totalExpense.toLocaleString("th-TH")}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* ── Category Cards ──────────────────────────────────── */}
       {isLoading ? (
         <div className="space-y-3">

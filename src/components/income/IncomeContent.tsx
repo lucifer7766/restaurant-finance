@@ -112,19 +112,24 @@ export function IncomeContent() {
 
       {/* ── Header ─────────────────────────────────────────── */}
       <div>
-        <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-0.5">
-          รายรับ
+        <p className="text-xs font-medium text-on-surface-variant tracking-normal mb-1">
+          แดชบอร์ดรายรับ
+        </p>
+        <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">
+          รายงานรายรับประจำเดือน
         </h2>
-        <p className="font-label-caps text-label-caps text-on-surface-variant">{monthLabel}</p>
+        <p className="font-body-md text-on-surface-variant">
+          ตรวจสอบและติดตามรายรับของ PLU Bistro อย่างเป็นระบบ
+        </p>
       </div>
 
       {/* ── Action buttons ─────────────────────────────────── */}
-      <div className="flex flex-col gap-3">
-        <Link href="/income/new" className="btn-primary w-full text-center">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Link href="/income/new" className="btn-primary flex-1 text-center">
           <span className="material-symbols-outlined text-[18px]">add_circle</span>
           เพิ่มรายรับ
         </Link>
-        <label className="btn-secondary w-full cursor-pointer">
+        <label className="btn-secondary flex-1 cursor-pointer">
           <input
             type="file"
             accept="image/*,.pdf,.csv,.xlsx"
@@ -164,41 +169,51 @@ export function IncomeContent() {
       )}
 
       {/* ── Payment Method Breakdown ────────────────────────── */}
-      {!isLoading && (
+      {isLoading ? (
         <div className="space-y-3">
-          {PAYMENT_METHODS.map(({ key, icon, bg, iconColor, barColor }) => {
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="metric-card rounded-2xl p-7 animate-pulse">
+              <div className="h-3 bg-surface-container-highest rounded w-1/3 mb-5" />
+              <div className="h-12 bg-surface-container-highest rounded w-2/3" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {PAYMENT_METHODS.map(({ key, icon, bg, iconColor }) => {
             const item = paymentBreakdown.find((p) => p.key === key);
             const amount = item?.amount ?? 0;
-            const pct = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
+            const pct = totalIncome > 0 ? Math.round((amount / totalIncome) * 100) : 0;
             return (
-              <div key={key} className="metric-card p-5 rounded-2xl">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${bg}`}>
-                    <span className={`material-symbols-outlined text-[18px] ${iconColor}`}>{icon}</span>
+              <div key={key} className="metric-card p-6 rounded-2xl">
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bg}`}>
+                    <span className={`material-symbols-outlined text-[20px] ${iconColor}`}>{icon}</span>
                   </div>
-                  <span className="font-body-md text-on-surface">{key}</span>
+                  <span className="text-xs font-medium tracking-normal text-on-surface-variant">
+                    {pct}% ของรายรับ
+                  </span>
                 </div>
-                <div className="flex items-baseline gap-1 text-on-surface mb-2">
+                <p className="text-sm font-medium text-on-surface-variant mb-1">{key}</p>
+                <div className="flex items-baseline gap-1 text-on-surface">
                   <span className="text-base font-bold opacity-50">฿</span>
                   <span className="text-3xl font-bold font-headline-md tracking-tight">
                     {amount.toLocaleString("th-TH")}
                   </span>
-                </div>
-                <div className="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
                 </div>
               </div>
             );
           })}
 
           {/* เฉลี่ยต่อวัน */}
-          <div className="metric-card p-5 rounded-2xl">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-primary-container flex items-center justify-center">
-                <span className="material-symbols-outlined text-on-primary-container text-[18px]">trending_up</span>
+          <div className="metric-card p-6 rounded-2xl">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center">
+                <span className="material-symbols-outlined text-on-primary-container text-[20px]">trending_up</span>
               </div>
-              <span className="font-body-md text-on-surface">เฉลี่ยต่อวัน</span>
+              <span className="text-xs font-medium tracking-normal text-on-surface-variant">รายวัน</span>
             </div>
+            <p className="text-sm font-medium text-on-surface-variant mb-1">เฉลี่ยต่อวัน</p>
             <div className="flex items-baseline gap-1 text-on-surface">
               <span className="text-base font-bold opacity-50">฿</span>
               <span className="text-3xl font-bold font-headline-md tracking-tight">
