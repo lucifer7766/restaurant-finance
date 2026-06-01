@@ -426,87 +426,51 @@ export function TransactionsContent() {
             ไม่พบรายการ
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-surface-variant text-left">
-                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">
-                    วันที่
-                  </th>
-                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">
-                    รายละเอียด
-                  </th>
-                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">
-                    หมวดหมู่
-                  </th>
-                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">
-                    ประเภท
-                  </th>
-                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">
-                    จำนวนเงิน
-                  </th>
-                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">
-                    จัดการ
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredTransactions.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-b border-surface-variant last:border-0 hover:bg-surface-container-low transition-colors"
-                  >
-                    <td className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">
-                      {item.date}
-                    </td>
-                    <td className="px-6 py-4 font-body-md text-on-surface max-w-[200px] truncate">
-                      {getText(item)}
-                    </td>
-                    <td className="px-6 py-4 font-body-md text-on-surface-variant">
-                      {item.category || "-"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full font-label-caps text-label-caps ${
-                          item.type === "income"
-                            ? "bg-primary-container text-on-primary-container"
-                            : "bg-error-container text-on-error-container"
-                        }`}
-                      >
-                        {item.type === "income" ? "รายรับ" : "รายจ่าย"}
+          <div className="divide-y divide-surface-container-low">
+            {filteredTransactions.map((item) => (
+              <div key={item.id} className="overflow-x-auto scrollbar-none hover:bg-surface-container-low transition-colors">
+                <div className="flex items-center">
+                  <div className="flex items-center gap-3 px-4 py-4 w-full shrink-0">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      item.type === "income" ? "bg-primary-container" : "bg-error-container"
+                    }`}>
+                      <span className={`material-symbols-outlined text-[16px] ${
+                        item.type === "income" ? "text-on-primary-container" : "text-on-error-container"
+                      }`}>
+                        {item.type === "income" ? "arrow_upward" : "arrow_downward"}
                       </span>
-                    </td>
-                    <td
-                      className={`px-6 py-4 text-right font-price-table text-price-table ${
-                        item.type === "income" ? "text-primary" : "text-error"
-                      }`}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-body-md text-on-surface text-sm leading-tight truncate">
+                        {getText(item)}
+                      </p>
+                      <p className="font-label-caps text-label-caps text-on-surface-variant mt-0.5">
+                        {item.category || "-"} · {item.date}
+                      </p>
+                    </div>
+                    <p className={`font-semibold text-sm whitespace-nowrap shrink-0 ${
+                      item.type === "income" ? "text-primary" : "text-error"
+                    }`}>
+                      {item.type === "income" ? "+" : "-"}{formatBaht(item.amount)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 px-3 border-l border-surface-container-low shrink-0">
+                    <button
+                      onClick={() => setEditingTransaction(item)}
+                      className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors"
                     >
-                      {item.type === "income" ? "+" : "-"}
-                      {formatBaht(item.amount)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setEditingTransaction(item)}
-                          className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors"
-                          title="แก้ไข"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">edit</span>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-1.5 rounded-lg text-error hover:bg-error-container transition-colors"
-                          title="ลบ"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>
