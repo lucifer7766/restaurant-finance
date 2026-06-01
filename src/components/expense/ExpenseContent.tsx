@@ -41,6 +41,7 @@ export function ExpenseContent() {
   const { transactions, isLoading, error, addTransaction, deleteTransaction, refreshTransactions } = useTransactions();
   const { selectedMonth } = useMonthFilter();
 
+  const [showAll, setShowAll] = useState(false);
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
   const [page, setPage] = useState(0);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -276,113 +277,141 @@ export function ExpenseContent() {
         </div>
       )}
 
-      {/* ── รายการรายจ่ายล่าสุด ─────────────────────────────── */}
+      {/* ── รายการล่าสุด / รายการทั้งหมด ───────────────────── */}
       <div className="metric-card rounded-2xl overflow-hidden">
-        <div className="p-6 pb-4 flex items-center gap-3 border-b border-surface-container-low">
-          <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center">
-            <span className="material-symbols-outlined text-on-surface-variant text-[18px]">receipt_long</span>
-          </div>
-          <h3 className="font-headline-md text-headline-md text-on-surface">รายการรายจ่ายล่าสุด</h3>
-        </div>
-
-        {/* Filter tabs */}
-        <div className="px-4 py-3 flex gap-2 overflow-x-auto border-b border-surface-container-low">
-          {tabCategories.map((tab) => (
+        <div className="p-6 pb-0 flex items-center justify-between">
+          <h3 className="font-headline-md text-headline-md text-on-surface">
+            {showAll ? "รายการทั้งหมด" : "รายการล่าสุด"}
+          </h3>
+          {showAll && (
             <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
-              className={`px-3 py-1.5 rounded-full font-label-caps text-label-caps shrink-0 transition-colors ${
-                activeTab === tab
-                  ? "bg-primary text-on-primary"
-                  : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
-              }`}
+              onClick={() => setShowAll(false)}
+              className="flex items-center gap-1 font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors"
             >
-              {getCategoryLabel(tab)}
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+              ย้อนกลับ
             </button>
-          ))}
+          )}
         </div>
 
         {isLoading ? (
           <p className="px-6 py-10 text-center font-body-md text-on-surface-variant">กำลังโหลด...</p>
         ) : monthExpenses.length === 0 ? (
           <p className="px-6 py-10 text-center font-body-md text-on-surface-variant">ไม่มีรายจ่ายใน{monthLabel}</p>
-        ) : (
+        ) : !showAll ? (
+          /* ── Recent (no edit/delete) ── */
           <>
-            <div className="px-4 py-1 grid grid-cols-[auto_1fr_auto_auto] gap-x-3">
-              <span className="font-label-caps text-label-caps text-on-surface-variant">วันที่</span>
-              <span className="font-label-caps text-label-caps text-on-surface-variant">รายการ</span>
-              <span className="font-label-caps text-label-caps text-on-surface-variant">หมวดหมู่</span>
-              <span className="font-label-caps text-label-caps text-on-surface-variant text-right">จำนวน</span>
+            <div className="mt-4 divide-y divide-surface-container-low">
+              {monthExpenses.slice(0, 5).map((tx) => {
+                const meta = getCategoryMeta(tx.category || "");
+                return (
+                  <div key={tx.id} className="px-5 py-4 grid grid-cols-[auto_1fr_auto] gap-x-3 items-center hover:bg-surface-container-low transition-colors">
+                    <div className="min-w-[56px]">
+                      <p className="font-label-caps text-label-caps text-on-surface leading-snug">
+                        {formatTransactionDate(tx.date)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${meta.bg}`}>
+                        <span className={`material-symbols-outlined text-[16px] ${meta.iconColor}`}>{meta.icon}</span>
+                      </div>
+                      <span className="font-body-md text-on-surface text-sm leading-tight truncate">
+                        {tx.description || getCategoryLabel(tx.category)}
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-semibold text-sm text-on-surface whitespace-nowrap">
+                        ฿{tx.amount.toLocaleString("th-TH")}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="p-5 border-t border-surface-container-low">
+              <button
+                onClick={() => setShowAll(true)}
+                className="block w-full text-center py-3 rounded-xl bg-surface-container font-body-md text-on-surface-variant hover:bg-surface-container-high transition-colors"
+              >
+                ดูรายการทั้งหมด
+              </button>
+            </div>
+          </>
+        ) : (
+          /* ── Full list (with edit/delete + tabs + pagination) ── */
+          <>
+            <div className="px-4 py-3 flex gap-2 overflow-x-auto border-b border-surface-container-low mt-2">
+              {tabCategories.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => handleTabChange(tab)}
+                  className={`px-3 py-1.5 rounded-full font-label-caps text-label-caps shrink-0 transition-colors ${
+                    activeTab === tab
+                      ? "bg-primary text-on-primary"
+                      : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
+                  }`}
+                >
+                  {getCategoryLabel(tab)}
+                </button>
+              ))}
             </div>
             <div className="divide-y divide-surface-container-low">
               {pagedExpenses.map((tx) => {
                 const meta = getCategoryMeta(tx.category || "");
                 return (
-                  <div key={tx.id} className="px-4 py-4 grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-x-3 items-center hover:bg-surface-container-low transition-colors">
+                  <div key={tx.id} className="px-4 py-4 grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-2 items-center hover:bg-surface-container-low transition-colors">
                     <div className="min-w-[52px]">
                       <p className="font-label-caps text-label-caps text-on-surface leading-tight">
                         {formatTransactionDate(tx.date)}
                       </p>
                     </div>
-                    <div>
-                      <p className="font-body-md text-on-surface text-sm leading-tight">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
+                        <span className={`material-symbols-outlined text-[14px] ${meta.iconColor}`}>{meta.icon}</span>
+                      </div>
+                      <span className="font-body-md text-on-surface text-sm leading-tight truncate">
                         {tx.description || getCategoryLabel(tx.category)}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full font-label-caps text-label-caps bg-surface-container text-on-surface-variant">
-                        {getCategoryLabel(tx.category)}
                       </span>
                     </div>
-                    <div className="text-right">
-                      <p className="font-price-table text-price-table text-on-surface whitespace-nowrap">
+                    <div className="text-right shrink-0">
+                      <p className="font-semibold text-sm text-on-surface whitespace-nowrap">
                         ฿{tx.amount.toLocaleString("th-TH")}
                       </p>
                     </div>
-                    <div>
-                      <button
-                        onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
-                        className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">edit</span>
-                      </button>
-                    </div>
-                    <div>
-                      <button
-                        onClick={async () => {
-                          if (!window.confirm("ลบรายการนี้?")) return;
-                          try {
-                            await deleteTransaction(tx.id);
-                          } catch (e) {
-                            alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
-                          }
-                        }}
-                        className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
+                      className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!window.confirm("ลบรายการนี้?")) return;
+                        try {
+                          await deleteTransaction(tx.id);
+                        } catch (e) {
+                          alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
+                        }
+                      }}
+                      className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
                   </div>
                 );
               })}
             </div>
             <div className="p-5 border-t border-surface-container-low flex items-center justify-between">
               <span className="font-label-caps text-label-caps text-on-surface-variant">
-                Showing {filteredExpenses.length === 0 ? 0 : page * PAGE_SIZE + 1} to {Math.min((page + 1) * PAGE_SIZE, filteredExpenses.length)} of {filteredExpenses.length} expenses
+                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredExpenses.length)} of {filteredExpenses.length}
               </span>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                  className="p-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
+                <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}
+                  className="p-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                   <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                 </button>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                  disabled={page >= totalPages - 1}
-                  className="p-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
+                <button onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+                  className="p-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                   <span className="material-symbols-outlined text-[18px]">chevron_right</span>
                 </button>
               </div>
