@@ -29,59 +29,95 @@ const VALID_CATEGORIES = [
   "อื่นๆ",
 ];
 
-/* ── Prompt ──────────────────────────────────────────────────────────────── */
+/* ── Text Parsers ────────────────────────────────────────────────────────── */
 
-const PROMPT = `You are a receipt OCR assistant for a Thai restaurant finance system.
-Analyze this receipt image and extract the following fields as JSON.
+/** Extract amount — priority: GRAND TOTAL > TOTAL > largest number found */
+function extractAmount(text: string): number | null {
+  const lines = text.split(/\r?\n/);
 
-Rules:
-- amount: total amount as a number (no currency symbol). null if not found.
-- date: date in YYYY-MM-DD format. null if not found.
-- category: pick the best match from this list ONLY: ${VALID_CATEGORIES.join(", ")}. null if unclear.
-- note: short description of what was purchased (Thai or English). null if not found.
-- confidence: "high" if you can read most fields clearly, "low" if partially readable, "unreadable" if image is too unclear.
+  // 1. GRAND TOTAL
+  for (const line of lines) {
+    if (/grand\s*total/i.test(line)) {
+      const m = line.match(/[\d,]+\.?\d*/g);
+      if (m) {
+        const nums = m.map((s) => parseFloat(s.replace(/,/g, ""))).filter((n) => n > 0);
+        if (nums.length) return Math.max(...nums);
+      }
+    }
+  }
 
-Respond with ONLY valid JSON, no markdown, no explanation:
-{"amount":null,"date":null,"category":null,"note":null,"confidence":"unreadable"}`;
+  // 2. TOTAL (not subtotal)
+  for (const line of lines) {
+    if (/\btotal\b/i.test(line) && !/sub\s*total/i.test(line)) {
+      const m = line.match(/[\d,]+\.?\d*/g);
+      if (m) {
+        const nums = m.map((s) => parseFloat(s.replace(/,/g, ""))).filter((n) => n > 0);
+        if (nums.length) return Math.max(...nums);
+      }
+    }
+  }
 
-/* ── Validate parsed result ──────────────────────────────────────────────── */
+  // 3. Largest number in the whole text
+  const allNums = (text.match(/[\d,]+\.?\d*/g) ?? [])
+    .map((s) => parseFloat(s.replace(/,/g, "")))
+    .filter((n) => n >= 1 && n < 10_000_000);
+  if (allNums.length) return Math.max(...allNums);
 
-function validate(raw: unknown): ScanReceiptResult {
-  if (!raw || typeof raw !== "object") return FALLBACK;
-  const r = raw as Record<string, unknown>;
+  return null;
+}
 
-  const amount =
-    typeof r.amount === "number" && r.amount > 0 ? r.amount : null;
+/** Extract date — looks for dd/mm/yyyy, dd-mm-yyyy, yyyy-mm-dd patterns */
+function extractDate(text: string): string | null {
+  const today = new Date().toISOString().slice(0, 10);
 
-  const date =
-    typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date)
-      ? r.date
-      : new Date().toISOString().slice(0, 10);
+  // yyyy-mm-dd
+  const iso = text.match(/(\d{4})[-/](\d{2})[-/](\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
 
-  const category =
-    typeof r.category === "string" && VALID_CATEGORIES.includes(r.category)
-      ? r.category
-      : null;
+  // dd/mm/yyyy or dd-mm-yyyy
+  const dmy = text.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})/);
+  if (dmy) {
+    const y = dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3];
+    const m = dmy[2].padStart(2, "0");
+    const d = dmy[1].padStart(2, "0");
+    // Convert Buddhist year if > 2400
+    const year = parseInt(y) > 2400 ? parseInt(y) - 543 : parseInt(y);
+    return `${year}-${m}-${d}`;
+  }
 
-  const note = typeof r.note === "string" && r.note.trim() ? r.note.trim() : null;
+  return today;
+}
 
-  const confidence =
-    r.confidence === "high" || r.confidence === "low"
-      ? r.confidence
-      : "unreadable";
+/** Guess category from keywords in text */
+function extractCategory(text: string): string | null {
+  const lower = text.toLowerCase();
+  if (/เนื้อ|หมู|ไก่|ปลา|ผัก|วัตถุดิบ|ingredient|meat|produce|grocery|food\s*supply/i.test(lower))
+    return "วัตถุดิบ";
+  if (/เช่า|ค่าเช่า|rent/i.test(lower)) return "ค่าเช่า";
+  if (/ไฟฟ้า|น้ำประปา|utility|electric|water\s*bill|pea|mwa/i.test(lower)) return "ค่าน้ำค่าไฟ";
+  if (/เงินเดือน|ค่าแรง|salary|wage|labor/i.test(lower)) return "ค่าแรง";
+  if (/โฆษณา|การตลาด|marketing|facebook|instagram|ads/i.test(lower)) return "การตลาด";
+  if (/บรรจุภัณฑ์|กล่อง|ถุง|packaging|box|bag/i.test(lower)) return "บรรจุภัณฑ์";
+  if (/ซ่อม|repair|maintenance|fix/i.test(lower)) return "ซ่อมบำรุง";
+  return null;
+}
 
-  return { amount, date, category, note, confidence };
+/** First non-empty line as note */
+function extractNote(text: string): string | null {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  return lines[0] ?? null;
 }
 
 /* ── POST Handler ────────────────────────────────────────────────────────── */
 
 export async function POST(req: NextRequest) {
   /* 1. Check API key */
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OCR_SPACE_API_KEY;
   if (!apiKey) {
+    console.error("OCR_SPACE_API_KEY not configured");
     return NextResponse.json(
-      { ...FALLBACK, error: "GEMINI_API_KEY not configured" },
-      { status: 200 } // return 200 so client shows modal with fallback
+      { ...FALLBACK, error: "OCR_SPACE_API_KEY not configured" },
+      { status: 200 }
     );
   }
 
@@ -90,52 +126,73 @@ export async function POST(req: NextRequest) {
   let mimeType: string;
   try {
     const body = await req.json();
-    image = body.image;       // base64 string (without data:... prefix)
+    image = body.image;
     mimeType = body.mimeType ?? "image/jpeg";
     if (!image) throw new Error("missing image");
   } catch {
+    console.error("scan-receipt: bad request body");
     return NextResponse.json(FALLBACK, { status: 200 });
   }
 
-  /* 3. Call Gemini */
+  /* 3. Call OCR.Space */
   try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: PROMPT },
-                { inline_data: { mime_type: mimeType, data: image } },
-              ],
-            },
-          ],
-          generationConfig: { temperature: 0, maxOutputTokens: 256 },
-        }),
-        signal: AbortSignal.timeout(15000), // 15s timeout
-      }
-    );
+    const formData = new URLSearchParams();
+    formData.append("base64Image", `data:${mimeType};base64,${image}`);
+    formData.append("apikey", apiKey);
+    formData.append("language", "tha");          // Thai + English
+    formData.append("isOverlayRequired", "false");
+    formData.append("detectOrientation", "true");
+    formData.append("scale", "true");
+    formData.append("OCREngine", "2");           // Engine 2 is more accurate
 
-    if (!geminiRes.ok) {
-      console.error("Gemini API error:", geminiRes.status);
-      console.error("Gemini API error body:", await geminiRes.text());
+    const ocrRes = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formData.toString(),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!ocrRes.ok) {
+      console.error("OCR.Space HTTP error:", ocrRes.status, await ocrRes.text());
       return NextResponse.json(FALLBACK, { status: 200 });
     }
 
-    /* 4. Parse Gemini response */
-    const geminiData = await geminiRes.json();
-    const text: string =
-      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    /* 4. Parse OCR response */
+    const ocrData = await ocrRes.json();
+    console.log("OCR.Space raw:", JSON.stringify(ocrData).slice(0, 500));
 
-    // Strip markdown code fences if present
-    const cleaned = text.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
+    if (ocrData.IsErroredOnProcessing) {
+      console.error("OCR.Space processing error:", ocrData.ErrorMessage);
+      return NextResponse.json(FALLBACK, { status: 200 });
+    }
 
-    /* 5. Validate and return */
-    return NextResponse.json(validate(parsed), { status: 200 });
+    const rawText: string =
+      ocrData?.ParsedResults?.[0]?.ParsedText ?? "";
+
+    if (!rawText.trim()) {
+      return NextResponse.json(FALLBACK, { status: 200 });
+    }
+
+    /* 5. Extract fields */
+    const amount   = extractAmount(rawText);
+    const date     = extractDate(rawText);
+    const category = extractCategory(rawText);
+    const note     = extractNote(rawText);
+
+    const confidence: ScanReceiptResult["confidence"] =
+      amount !== null ? "high" : rawText.length > 20 ? "low" : "unreadable";
+
+    const result: ScanReceiptResult = {
+      amount,
+      date,
+      category,
+      note,
+      confidence,
+    };
+
+    console.log("scan-receipt result:", JSON.stringify(result));
+    return NextResponse.json(result, { status: 200 });
+
   } catch (err) {
     console.error("scan-receipt error:", err);
     return NextResponse.json(FALLBACK, { status: 200 });
