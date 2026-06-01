@@ -283,13 +283,20 @@ export function ExpenseContent() {
           <h3 className="font-headline-md text-headline-md text-on-surface">
             {showAll ? "รายการทั้งหมด" : "รายการล่าสุด"}
           </h3>
-          {showAll && (
+          {showAll ? (
             <button
               onClick={() => setShowAll(false)}
               className="flex items-center gap-1 font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors"
             >
               <span className="material-symbols-outlined text-[16px]">arrow_back</span>
               ย้อนกลับ
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowAll(true)}
+              className="font-label-caps text-label-caps text-primary hover:underline transition-colors"
+            >
+              ดูทั้งหมด
             </button>
           )}
         </div>
@@ -327,14 +334,6 @@ export function ExpenseContent() {
                   </div>
                 );
               })}
-            </div>
-            <div className="p-5 border-t border-surface-container-low">
-              <button
-                onClick={() => setShowAll(true)}
-                className="block w-full text-center py-3 rounded-xl bg-surface-container font-body-md text-on-surface-variant hover:bg-surface-container-high transition-colors"
-              >
-                ดูรายการทั้งหมด
-              </button>
             </div>
           </>
         ) : (
