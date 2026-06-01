@@ -371,6 +371,7 @@ export function ExpenseContent() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onConfirm={async (data) => {
+          console.log("[parent] onConfirm received:", data);
           try {
             await addTransaction({
               date: data.date,
@@ -379,8 +380,9 @@ export function ExpenseContent() {
               amount: data.amount,
               note: data.note || "",
             } as Parameters<typeof addTransaction>[0]);
+            console.log("[parent] addTransaction success");
           } catch (e) {
-            console.error("addTransaction error:", e);
+            console.error("[parent] addTransaction error:", e);
           } finally {
             setModalOpen(false);
           }

@@ -62,6 +62,7 @@ export function ReceiptScanModal({ open, onClose, onConfirm, initialData }: Prop
 
   function handleConfirm() {
     const amt = Number(amount);
+    console.log("[modal] confirm pressed — amount:", amt, "date:", date, "category:", category);
     if (!amt || amt <= 0) { setError("กรุณากรอกจำนวนเงิน"); return; }
     if (!date) { setError("กรุณาเลือกวันที่"); return; }
     setError(null);
