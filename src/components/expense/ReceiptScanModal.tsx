@@ -171,7 +171,7 @@ export function ReceiptScanModal({ open, onClose, onConfirm, initialData }: Prop
         </div>{/* end scrollable body */}
 
         {/* Sticky footer — always visible */}
-        <div className="px-6 pt-3 pb-[env(safe-area-inset-bottom,16px)] border-t border-surface-container-low bg-surface sm:rounded-b-3xl rounded-b-3xl flex gap-3">
+        <div className="px-6 pt-3 pb-[calc(80px+env(safe-area-inset-bottom,0px))] sm:pb-4 border-t border-surface-container-low bg-surface sm:rounded-b-3xl rounded-b-3xl flex gap-3 z-50">
           <button
             onClick={onClose}
             className="flex-1 py-3 rounded-xl border border-outline-variant font-body-md text-on-surface-variant hover:bg-surface-container transition-colors"
