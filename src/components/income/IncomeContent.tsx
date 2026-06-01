@@ -6,9 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import { PosImportModal, type PosGroup } from "@/components/income/PosImportModal";
-import { PosImportHistory, type ImportBatch } from "@/components/income/PosImportHistory";
-import { updateTransaction } from "@/lib/supabase/transactions";
-import { getSupabaseClient } from "@/lib/supabase/client";
+import { PosImportHistory, EditBatchModal, DeleteConfirmModal, type ImportBatch } from "@/components/income/PosImportHistory";
+import { updateTransaction, deleteTransaction as deleteTransactionFromSupabase } from "@/lib/supabase/transactions";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
@@ -60,6 +59,8 @@ export function IncomeContent() {
   const { transactions, isLoading, error, addTransaction, deleteTransaction, refreshTransactions } = useTransactions();
   const [posModalOpen, setPosModalOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [editingBatch, setEditingBatch] = useState<ImportBatch | null>(null);
+  const [deletingBatch, setDeletingBatch] = useState<ImportBatch | null>(null);
   const { selectedMonth } = useMonthFilter();
 
   const searchParams = useSearchParams();
@@ -476,50 +477,52 @@ export function IncomeContent() {
             <div className="overflow-y-auto flex-1 px-6 pb-6">
               <PosImportHistory
                 batches={importBatches}
-                onDelete={async (batchId) => {
-                  console.log("[POS Delete] batchId:", batchId);
-                  const supabase = getSupabaseClient();
-
-                  // 1. query หา records จาก note field จริงใน DB
-                  const { data: found, error: findError } = await supabase
-                    .from("transactions")
-                    .select("id")
-                    .ilike("note", `%${batchId}%`);
-
-                  if (findError) {
-                    console.error("[POS Delete] find error:", findError);
-                    throw new Error(findError.message);
-                  }
-
-                  const ids = (found ?? []).map((r: { id: string }) => r.id);
-                  console.log("[POS Delete] records found:", ids.length, ids);
-
-                  if (ids.length === 0) throw new Error("ไม่พบรายการรายรับของ import นี้");
-
-                  // 2. delete ทีเดียว
-                  const { error: delError } = await supabase
-                    .from("transactions")
-                    .delete()
-                    .in("id", ids);
-
-                  if (delError) {
-                    console.error("[POS Delete] delete error:", delError);
-                    throw new Error(delError.message);
-                  }
-
-                  console.log("[POS Delete] deleted", ids.length, "records");
-                  await refreshTransactions();
-                }}
-                onEdit={async (_batchId, updates) => {
-                  for (const u of updates) {
-                    await updateTransaction(u.id, { date: u.date, category: u.category, amount: u.amount });
-                  }
-                  await refreshTransactions();
-                }}
+                editingBatch={editingBatch}
+                deletingBatch={deletingBatch}
+                setEditingBatch={setEditingBatch}
+                setDeletingBatch={setDeletingBatch}
+                onDelete={async () => {}}
+                onEdit={async () => {}}
               />
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── POS Batch Edit Modal (outside drawer to avoid Safari overflow bug) ── */}
+      {editingBatch && (
+        <EditBatchModal
+          batch={editingBatch}
+          onClose={() => setEditingBatch(null)}
+          onSave={async (updates) => {
+            for (const u of updates) {
+              await updateTransaction(u.id, { date: u.date, category: u.category, amount: u.amount });
+            }
+            await refreshTransactions();
+            setEditingBatch(null);
+          }}
+        />
+      )}
+
+      {/* ── POS Batch Delete Modal (outside drawer to avoid Safari overflow bug) ── */}
+      {deletingBatch && (
+        <DeleteConfirmModal
+          batch={deletingBatch}
+          onClose={() => setDeletingBatch(null)}
+          onConfirm={async () => {
+            console.log("[POS Delete] confirm clicked", deletingBatch.batchId);
+            const ids = deletingBatch.transactions.map((t) => t.id);
+            console.log("[POS Delete] ids:", ids);
+            if (ids.length === 0) throw new Error("ไม่พบรายการรายรับของ import นี้");
+            for (const id of ids) {
+              console.log("[POS Delete] deleting id:", id);
+              await deleteTransactionFromSupabase(id);
+            }
+            console.log("[POS Delete] done");
+            await refreshTransactions();
+            setDeletingBatch(null);
+          }}
+        />
       )}
 
       {/* ── Edit Transaction Modal ────────────────────────── */}

@@ -22,8 +22,13 @@ export interface ImportBatch {
 
 interface Props {
   batches: ImportBatch[];
-  onDelete: (batchId: string) => Promise<void>;
+  onDelete: (batchId: string, ids: string[]) => Promise<void>;
   onEdit: (batchId: string, updates: { id: string; date: string; category: string; amount: number }[]) => Promise<void>;
+  // lifted modals — rendered outside overflow container by parent
+  editingBatch: ImportBatch | null;
+  deletingBatch: ImportBatch | null;
+  setEditingBatch: (b: ImportBatch | null) => void;
+  setDeletingBatch: (b: ImportBatch | null) => void;
 }
 
 function fmt(n: number) {
@@ -43,7 +48,7 @@ interface EditRow {
   amount: string;
 }
 
-function EditBatchModal({
+export function EditBatchModal({
   batch,
   onClose,
   onSave,
@@ -158,7 +163,7 @@ function EditBatchModal({
 
 /* ── Delete Confirm Modal ── */
 
-function DeleteConfirmModal({
+export function DeleteConfirmModal({
   batch,
   onClose,
   onConfirm,
@@ -193,8 +198,9 @@ function DeleteConfirmModal({
           <p className="font-body-md text-on-surface-variant text-sm">
             {batch.isLegacy ? "รายการนำเข้าเก่า (ไม่พบ Batch ID)" : `นำเข้าเมื่อ ${formatImportDate(batch.importedAt)}`}
           </p>
-          <div className="mt-3 p-3 rounded-xl bg-surface-container">
+          <div className="mt-3 p-3 rounded-xl bg-surface-container space-y-1">
             <p className="text-sm text-on-surface">{batch.transactions.length} หมวดหมู่ · ยอดรวม {fmt(batch.totalAmount)}</p>
+            <p className="text-xs text-on-surface-variant">จะลบ {batch.transactions.length} records (ids: {batch.transactions.map(t => t.id.slice(0,8)).join(", ")}...)</p>
           </div>
           {batch.isLegacy ? (
             <div className="mt-3 p-3 rounded-xl bg-tertiary-container">
@@ -227,9 +233,7 @@ function DeleteConfirmModal({
 
 /* ── Main History Component ── */
 
-export function PosImportHistory({ batches, onDelete, onEdit }: Props) {
-  const [editingBatch, setEditingBatch] = useState<ImportBatch | null>(null);
-  const [deletingBatch, setDeletingBatch] = useState<ImportBatch | null>(null);
+export function PosImportHistory({ batches, onDelete, onEdit, editingBatch, deletingBatch, setEditingBatch, setDeletingBatch }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   if (batches.length === 0) return null;
@@ -289,27 +293,7 @@ export function PosImportHistory({ batches, onDelete, onEdit }: Props) {
         </button>
       )}
 
-      {editingBatch && (
-        <EditBatchModal
-          batch={editingBatch}
-          onClose={() => setEditingBatch(null)}
-          onSave={async (updates) => {
-            await onEdit(editingBatch.batchId, updates);
-            setEditingBatch(null);
-          }}
-        />
-      )}
-
-      {deletingBatch && (
-        <DeleteConfirmModal
-          batch={deletingBatch}
-          onClose={() => setDeletingBatch(null)}
-          onConfirm={async () => {
-            await onDelete(deletingBatch.batchId);
-            setDeletingBatch(null);
-          }}
-        />
-      )}
+      {/* modals rendered by parent (IncomeContent) to avoid Safari overflow bug */}
     </div>
   );
 }
