@@ -197,7 +197,7 @@ export function CostAnalysisContent() {
           </div>
         </div>
         <div className="metric-card p-5 rounded-2xl">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">Cost Ratio</span>
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">สัดส่วนต้นทุน</span>
           <span className={`text-2xl font-bold font-headline-md tracking-tight ${costRatio > 70 ? "text-error" : "text-primary"}`}>
             {costRatio.toFixed(1)}%
           </span>

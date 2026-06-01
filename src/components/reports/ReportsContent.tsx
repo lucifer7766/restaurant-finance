@@ -271,7 +271,7 @@ export function ReportsContent() {
           </div>
           <div>
             <h3 className="font-headline-md text-headline-md text-on-surface">วิเคราะห์อัตโนมัติ</h3>
-            <p className="font-label-caps text-label-caps text-on-surface-variant">Rule-based analysis</p>
+            <p className="font-label-caps text-label-caps text-on-surface-variant">วิเคราะห์จากเกณฑ์ข้อมูล</p>
           </div>
         </div>
         <div className="space-y-3">

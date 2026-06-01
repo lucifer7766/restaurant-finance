@@ -60,7 +60,7 @@ export function ExpenseContent() {
       {/* ── Header ─────────────────────────────────────────── */}
       <div>
         <p className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest mb-1">
-          Management Dashboard
+          จัดการรายจ่าย
         </p>
         <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">
           รายงานรายจ่ายประจำเดือน
@@ -120,7 +120,7 @@ export function ExpenseContent() {
                   </div>
                   {isTop && (
                     <span className="font-label-caps text-label-caps text-primary bg-primary-container px-2 py-0.5 rounded-full">
-                      +12% vs last month
+                      +12% จากเดือนก่อน
                     </span>
                   )}
                 </div>
@@ -191,7 +191,7 @@ export function ExpenseContent() {
             </div>
             <div className="p-5 border-t border-surface-container-low flex items-center justify-between">
               <span className="font-label-caps text-label-caps text-on-surface-variant">
-                Showing 1 to {Math.min(10, monthExpenses.length)} of {monthExpenses.length} expenses
+                แสดง 1–{Math.min(10, monthExpenses.length)} จากทั้งหมด {monthExpenses.length} รายการ
               </span>
               <div className="flex gap-2">
                 <button className="p-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors">

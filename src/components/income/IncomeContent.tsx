@@ -96,7 +96,7 @@ export function IncomeContent() {
         </Link>
         <button className="btn-secondary flex-1" disabled>
           <span className="material-symbols-outlined text-[18px]">upload_file</span>
-          สัปโหลดรายงาน POS
+          อัปโหลดรายงาน POS
         </button>
       </div>
 
