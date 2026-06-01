@@ -7,6 +7,7 @@ import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
 import { ReceiptScanModal, type ScanResult } from "@/components/expense/ReceiptScanModal";
+import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 
 const EXPENSE_CATEGORY_META: Record<string, { icon: string; iconColor: string; bg: string }> = {
   วัตถุดิบ: { icon: "grocery",       iconColor: "text-on-primary-container",      bg: "bg-primary-container" },
@@ -37,7 +38,7 @@ function getBadgeMeta(category: string): { text: string; textColor: string } {
 const PAGE_SIZE = 10;
 
 export function ExpenseContent() {
-  const { transactions, isLoading, error, addTransaction, deleteTransaction } = useTransactions();
+  const { transactions, isLoading, error, addTransaction, deleteTransaction, refreshTransactions } = useTransactions();
   const { selectedMonth } = useMonthFilter();
 
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
@@ -46,6 +47,7 @@ export function ExpenseContent() {
   const [scanning, setScanning] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [editingTx, setEditingTx] = useState<Parameters<typeof EditTransactionModal>[0]["transaction"]>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const FALLBACK_RESULT: ScanResult = {
@@ -316,7 +318,7 @@ export function ExpenseContent() {
               {pagedExpenses.map((tx) => {
                 const meta = getCategoryMeta(tx.category || "");
                 return (
-                  <div key={tx.id} className="px-4 py-4 grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-3 items-center hover:bg-surface-container-low transition-colors">
+                  <div key={tx.id} className="px-4 py-4 grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-x-3 items-center hover:bg-surface-container-low transition-colors">
                     <div className="min-w-[52px]">
                       <p className="font-label-caps text-label-caps text-on-surface leading-tight">
                         {formatTransactionDate(tx.date)}
@@ -339,9 +341,21 @@ export function ExpenseContent() {
                     </div>
                     <div>
                       <button
+                        onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
+                        className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                      </button>
+                    </div>
+                    <div>
+                      <button
                         onClick={async () => {
                           if (!window.confirm("ลบรายการนี้?")) return;
-                          await deleteTransaction(tx.id);
+                          try {
+                            await deleteTransaction(tx.id);
+                          } catch (e) {
+                            alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
+                          }
                         }}
                         className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
                       >
@@ -376,6 +390,13 @@ export function ExpenseContent() {
           </>
         )}
       </div>
+
+      {/* ── Edit Transaction Modal ────────────────────────── */}
+      <EditTransactionModal
+        transaction={editingTx}
+        onClose={() => setEditingTx(null)}
+        onSaved={async () => { setEditingTx(null); await refreshTransactions(); }}
+      />
 
       {/* ── Receipt Scan Modal ─────────────────────────────── */}
       <ReceiptScanModal
