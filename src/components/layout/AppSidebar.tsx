@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
   { href: "/dashboard", label: "แดชบอร์ด", icon: "dashboard" },
@@ -11,6 +12,14 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, signOut } = useAuth();
+
+  async function handleSignOut() {
+    await signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <aside
@@ -50,6 +59,22 @@ export function AppSidebar() {
           );
         })}
       </nav>
+
+      {/* User + Logout */}
+      <div className="border-t border-outline-variant pt-4 flex flex-col gap-2">
+        {user && (
+          <p className="px-2 text-xs text-on-surface-variant truncate">
+            {user.email}
+          </p>
+        )}
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-variant transition-all w-full text-left"
+        >
+          <span className="material-symbols-outlined">logout</span>
+          <span>ออกจากระบบ</span>
+        </button>
+      </div>
     </aside>
   );
 }

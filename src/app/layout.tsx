@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope, Work_Sans, JetBrains_Mono } from "next/font/google";
+import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -44,7 +45,9 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
         />
       </head>
-      <body className="canvas-bg min-h-full flex flex-col">{children}</body>
+      <body className="canvas-bg min-h-full flex flex-col">
+          <AuthProvider>{children}</AuthProvider>
+        </body>
     </html>
   );
 }

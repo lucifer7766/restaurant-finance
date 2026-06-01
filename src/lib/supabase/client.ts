@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
-export function createSupabaseClient() {
+function getEnvVars() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -10,14 +10,15 @@ export function createSupabaseClient() {
     );
   }
 
-  return createClient(url, anonKey);
+  return { url, anonKey };
 }
 
-let browserClient: ReturnType<typeof createSupabaseClient> | null = null;
+let browserClient: ReturnType<typeof createBrowserClient> | null = null;
 
 export function getSupabaseClient() {
   if (!browserClient) {
-    browserClient = createSupabaseClient();
+    const { url, anonKey } = getEnvVars();
+    browserClient = createBrowserClient(url, anonKey);
   }
 
   return browserClient;
