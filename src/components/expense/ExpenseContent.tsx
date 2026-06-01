@@ -382,7 +382,8 @@ export function ExpenseContent() {
             } as Parameters<typeof addTransaction>[0]);
             console.log("[parent] addTransaction success");
           } catch (e) {
-            console.error("[parent] addTransaction error:", e);
+            console.error("[OCR_CONFIRM_ERROR_FULL]", e);
+            alert(e instanceof Error ? e.message : JSON.stringify(e));
           } finally {
             setModalOpen(false);
           }
