@@ -326,11 +326,19 @@ export function DashboardContent() {
 
       {/* ── Recent Transactions ────────────────────────────── */}
       <div className="metric-card rounded-2xl overflow-hidden">
-        <div className="p-7 pb-0">
-          <h3 className="font-headline-md text-headline-md text-on-surface">รายการล่าสุด</h3>
-          <p className="mt-1 font-label-caps text-label-caps text-on-surface-variant">
-            {selectedMonthTransactions.length} รายการใน{monthLabel}
-          </p>
+        <div className="p-7 pb-0 flex items-start justify-between">
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface">รายการล่าสุด</h3>
+            <p className="mt-1 font-label-caps text-label-caps text-on-surface-variant">
+              {selectedMonthTransactions.length} รายการใน{monthLabel}
+            </p>
+          </div>
+          <Link
+            href="/transactions"
+            className="font-label-caps text-label-caps text-primary hover:underline transition-colors shrink-0"
+          >
+            รายการทั้งหมด
+          </Link>
         </div>
         {selectedMonthTransactions.length === 0 ? (
           <p className="px-7 py-10 text-center font-body-md text-on-surface-variant">ไม่มีรายการใน{monthLabel}</p>
@@ -361,20 +369,6 @@ export function DashboardContent() {
                   </div>
                 </div>
               ))}
-            </div>
-            <div className="p-5 border-t border-surface-container-low flex gap-3">
-              <Link
-                href="/income?view=all"
-                className="flex-1 text-center py-3 rounded-xl bg-surface-container font-body-md text-on-surface-variant hover:bg-surface-container-high transition-colors"
-              >
-                รายรับทั้งหมด
-              </Link>
-              <Link
-                href="/expense?view=all"
-                className="flex-1 text-center py-3 rounded-xl bg-surface-container font-body-md text-on-surface-variant hover:bg-surface-container-high transition-colors"
-              >
-                รายจ่ายทั้งหมด
-              </Link>
             </div>
           </>
         )}
