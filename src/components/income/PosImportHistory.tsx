@@ -17,7 +17,8 @@ export interface ImportBatch {
   importedAt: Date;
   transactions: ImportTransaction[];
   totalAmount: number;
-  isLegacy?: boolean; // import เก่าก่อนมี batch ID
+  isLegacy?: boolean;
+  payBreakdown?: { cash: number; transfer: number; card: number };
 }
 
 interface Props {
@@ -46,6 +47,13 @@ interface EditRow {
   date: string;
   category: string;
   amount: string;
+  originalNote: string;
+}
+
+interface PayEdit {
+  cash: string;
+  transfer: string;
+  card: string;
 }
 
 export function EditBatchModal({
@@ -55,7 +63,7 @@ export function EditBatchModal({
 }: {
   batch: ImportBatch;
   onClose: () => void;
-  onSave: (updates: { id: string; date: string; category: string; amount: number }[]) => Promise<void>;
+  onSave: (updates: { id: string; date: string; category: string; amount: number; note: string }[], pay: { cash: number; transfer: number; card: number }) => Promise<void>;
 }) {
   const [rows, setRows] = useState<EditRow[]>(
     batch.transactions.map((t) => ({
@@ -63,12 +71,18 @@ export function EditBatchModal({
       date: t.date,
       category: t.category,
       amount: String(t.amount),
+      originalNote: t.description,
     }))
   );
+  const [pay, setPay] = useState<PayEdit>({
+    cash:     String(batch.payBreakdown?.cash ?? 0),
+    transfer: String(batch.payBreakdown?.transfer ?? 0),
+    card:     String(batch.payBreakdown?.card ?? 0),
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function updateRow(i: number, field: keyof EditRow, value: string) {
+  function updateRow(i: number, field: keyof Omit<EditRow, "originalNote">, value: string) {
     setRows((prev) => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
   }
 
@@ -77,9 +91,21 @@ export function EditBatchModal({
       if (!r.category.trim()) { setError("กรุณากรอกชื่อหมวดหมู่"); return; }
       if (isNaN(Number(r.amount)) || Number(r.amount) <= 0) { setError("ยอดเงินไม่ถูกต้อง"); return; }
     }
+    const newPay = { cash: Number(pay.cash) || 0, transfer: Number(pay.transfer) || 0, card: Number(pay.card) || 0 };
+    const payStr = `pay:เงินสด=${newPay.cash},โอนเงิน=${newPay.transfer},บัตรเครดิต=${newPay.card}`;
+    const updates = rows.map((r) => {
+      // reconstruct note: keep batchId, update category, keep count, update pay
+      const parts = r.originalNote.split(" | ");
+      const batchId = parts[0] ?? batch.batchId;
+      const countPart = parts[2] ?? `รวม ${batch.transactions.length} รายการ`;
+      const note = `${batchId} | ${r.category.trim()} | ${countPart} | ${payStr}`;
+      return { id: r.id, date: r.date, category: r.category.trim(), amount: Number(r.amount), note };
+    });
+    console.log("[POS Edit] selectedBatch", batch);
+    console.log("[POS Edit] payload", updates);
     setSaving(true);
     try {
-      await onSave(rows.map((r) => ({ id: r.id, date: r.date, category: r.category.trim(), amount: Number(r.amount) })));
+      await onSave(updates, newPay);
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
@@ -146,6 +172,21 @@ export function EditBatchModal({
               </div>
             </div>
           ))}
+
+          <div className="metric-card p-4 rounded-xl space-y-2">
+            <p className="text-xs font-medium text-on-surface-variant">ช่องทางชำระเงิน (บาท)</p>
+            {([["เงินสด","cash"],["โอนเงิน","transfer"],["บัตรเครดิต","card"]] as const).map(([label, field]) => (
+              <div key={field} className="flex items-center gap-2">
+                <span className="text-sm text-on-surface w-24 shrink-0">{label}</span>
+                <input
+                  type="number"
+                  className="flex-1 bg-surface-container rounded-xl px-3 py-2 text-sm text-on-surface border border-outline-variant focus:border-primary outline-none"
+                  value={pay[field]}
+                  onChange={(e) => setPay((p) => ({ ...p, [field]: e.target.value }))}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="px-6 pb-6 pt-3 flex gap-3 shrink-0 border-t border-surface-container-low">
@@ -265,7 +306,7 @@ export function PosImportHistory({ batches, onDelete, onEdit, editingBatch, dele
                 <span className="material-symbols-outlined text-[18px]">edit</span>
               </button>
               <button
-                onClick={() => setDeletingBatch(batch)}
+                onClick={() => { console.log("[POS Delete] delete button clicked", batch); setDeletingBatch(batch); }}
                 className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
               >
                 <span className="material-symbols-outlined text-[18px]">delete</span>
@@ -273,6 +314,20 @@ export function PosImportHistory({ batches, onDelete, onEdit, editingBatch, dele
             </div>
           </div>
 
+          {batch.payBreakdown && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {[
+                { label: "เงินสด", val: batch.payBreakdown.cash },
+                { label: "โอนเงิน", val: batch.payBreakdown.transfer },
+                { label: "บัตรเครดิต", val: batch.payBreakdown.card },
+              ].filter((p) => p.val > 0).map((p) => (
+                <div key={p.label} className="bg-surface-container rounded-lg px-2 py-1 flex items-center gap-1">
+                  <span className="text-xs text-on-surface-variant">{p.label}</span>
+                  <span className="text-xs font-medium text-on-surface">{fmt(p.val)}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
             {batch.transactions.map((t) => (
               <div key={t.id} className="bg-surface-container rounded-lg px-2 py-1 flex items-center gap-1.5">

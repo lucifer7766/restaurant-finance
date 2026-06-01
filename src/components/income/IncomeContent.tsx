@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
-import { PosImportModal, type PosGroup } from "@/components/income/PosImportModal";
+import { PosImportModal, type PosGroup, type PaymentBreakdown } from "@/components/income/PosImportModal";
 import { PosImportHistory, EditBatchModal, DeleteConfirmModal, type ImportBatch } from "@/components/income/PosImportHistory";
 import { updateTransaction, deleteTransaction as deleteTransactionFromSupabase } from "@/lib/supabase/transactions";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
@@ -48,6 +49,16 @@ const PAGE_SIZE = 10;
 const POS_PREFIX = "POS_IMPORT_";
 const LEGACY_POS_MARKER = "POS Import:"; // format เก่าก่อนมี batch ID
 const LEGACY_BATCH_ID = "__LEGACY_POS__";
+
+function encodePayment(p: PaymentBreakdown): string {
+  return `pay:เงินสด=${p.cash},โอนเงิน=${p.transfer},บัตรเครดิต=${p.card}`;
+}
+
+function parsePayment(note: string): PaymentBreakdown | null {
+  const m = note.match(/pay:เงินสด=(\d+),โอนเงิน=(\d+),บัตรเครดิต=(\d+)/);
+  if (!m) return null;
+  return { cash: Number(m[1]), transfer: Number(m[2]), card: Number(m[3]) };
+}
 
 function parseBatchId(description: string): string | null {
   if (description.startsWith(POS_PREFIX)) return description.split(" | ")[0].trim();
@@ -103,11 +114,13 @@ export function IncomeContent() {
       const importedAt = isNaN(ts) || ts === 0 ? new Date(0) : new Date(ts);
       const existing = map.get(batchId);
       const tx = { id: t.id, date: t.date, category: t.category, amount: t.amount, description: t.description };
+      const pay = parsePayment(t.description || "");
       if (existing) {
         existing.transactions.push(tx);
         existing.totalAmount += t.amount;
+        if (pay && !existing.payBreakdown) existing.payBreakdown = pay;
       } else {
-        map.set(batchId, { batchId, importedAt, transactions: [tx], totalAmount: t.amount, isLegacy });
+        map.set(batchId, { batchId, importedAt, transactions: [tx], totalAmount: t.amount, isLegacy, payBreakdown: pay ?? undefined });
       }
     }
     return Array.from(map.values()).sort((a, b) => b.importedAt.getTime() - a.importedAt.getTime());
@@ -123,12 +136,35 @@ export function IncomeContent() {
     [prevMonthIncome]
   );
 
+  // คำนวณ payment breakdown โดยแยก POS import (อ่านจาก pay: ใน note) กับรายรับ manual
   const paymentBreakdown = useMemo(() => {
+    const posPayKey: Record<string, number> = { เงินสด: 0, โอนเงิน: 0, บัตรเครดิต: 0 };
+    const seenBatches = new Set<string>();
+    for (const t of monthIncome) {
+      const bid = parseBatchId(t.description || "");
+      if (bid && bid !== LEGACY_BATCH_ID) {
+        if (!seenBatches.has(bid)) {
+          seenBatches.add(bid);
+          const pay = parsePayment(t.description || "");
+          if (pay) {
+            posPayKey["เงินสด"] += pay.cash;
+            posPayKey["โอนเงิน"] += pay.transfer;
+            posPayKey["บัตรเครดิต"] += pay.card;
+          }
+        }
+        continue; // ข้าม POS rows จาก manual filter
+      }
+    }
+
+    const manualIncome = monthIncome.filter((t) => !parseBatchId(t.description || ""));
+    const prevManualIncome = prevMonthIncome.filter((t) => !parseBatchId(t.description || ""));
+
     return PAYMENT_METHODS.map(({ key }) => {
-      const amount = monthIncome
+      const manualAmt = manualIncome
         .filter((t) => (t.category || "").includes(key) || (t.description || "").includes(key))
         .reduce((s, t) => s + t.amount, 0);
-      const prevAmount = prevMonthIncome
+      const amount = manualAmt + (posPayKey[key] ?? 0);
+      const prevAmount = prevManualIncome
         .filter((t) => (t.category || "").includes(key) || (t.description || "").includes(key))
         .reduce((s, t) => s + t.amount, 0);
       return { key, amount, prevAmount };
@@ -425,6 +461,10 @@ export function IncomeContent() {
                         </button>
                         <button
                           onClick={async () => {
+                            if (parseBatchId(tx.description || "")) {
+                              alert("รายการนี้มาจาก POS Import\nกรุณาลบทั้ง batch จากประวัติการนำเข้า POS");
+                              return;
+                            }
                             if (!window.confirm("ลบรายการนี้?")) return;
                             try { await deleteTransaction(tx.id); }
                             catch (e) { alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ"); }
@@ -494,9 +534,12 @@ export function IncomeContent() {
         <EditBatchModal
           batch={editingBatch}
           onClose={() => setEditingBatch(null)}
-          onSave={async (updates) => {
+          onSave={async (updates, _pay) => {
+            console.log("[POS Edit] saving updates", updates);
             for (const u of updates) {
-              await updateTransaction(u.id, { date: u.date, category: u.category, amount: u.amount });
+              const payload = { date: u.date, category: u.category, amount: u.amount, note: u.note };
+              console.log("[POS Edit] payload", payload);
+              await updateTransaction(u.id, payload);
             }
             await refreshTransactions();
             setEditingBatch(null);
@@ -514,13 +557,28 @@ export function IncomeContent() {
             const ids = deletingBatch.transactions.map((t) => t.id);
             console.log("[POS Delete] ids:", ids);
             if (ids.length === 0) throw new Error("ไม่พบรายการรายรับของ import นี้");
+            const supabase = getSupabaseClient();
             for (const id of ids) {
-              console.log("[POS Delete] deleting id:", id);
-              await deleteTransactionFromSupabase(id);
+              try {
+                console.log("[POS Delete] deleting", id);
+                await deleteTransactionFromSupabase(id);
+                console.log("[POS Delete] deleted", id);
+                // verify
+                const { data: still } = await supabase
+                  .from("transactions").select("id").eq("id", id).maybeSingle();
+                console.log("[POS Delete] verify result", still);
+                if (still) throw new Error(`ลบไม่สำเร็จ: record ${id} ยังอยู่ใน database (อาจติด RLS)`);
+              } catch (e) {
+                console.error("[POS Delete] error", id, e);
+                throw e;
+              }
             }
             console.log("[POS Delete] done");
+            console.log("[POS Delete] refreshTransactions called");
             await refreshTransactions();
+            console.log("[POS Delete] transactions after refresh", transactions.length);
             setDeletingBatch(null);
+            setHistoryOpen(false);
           }}
         />
       )}
@@ -536,16 +594,17 @@ export function IncomeContent() {
       <PosImportModal
         open={posModalOpen}
         onClose={() => setPosModalOpen(false)}
-        onConfirm={async (groups: PosGroup[]) => {
+        onConfirm={async (groups: PosGroup[], payment: PaymentBreakdown) => {
           if (groups.length === 0) throw new Error("ไม่มีข้อมูลให้บันทึก");
           const batchId = `${POS_PREFIX}${Date.now()}`;
+          const payStr = encodePayment(payment);
           for (const g of groups) {
             await addTransaction({
               date: g.date,
               type: "income" as const,
               category: g.category,
               amount: g.amount,
-              note: `${batchId} | ${g.category} | รวม ${g.count} รายการ`,
+              note: `${batchId} | ${g.category} | รวม ${g.count} รายการ | ${payStr}`,
             });
           }
           await refreshTransactions();
