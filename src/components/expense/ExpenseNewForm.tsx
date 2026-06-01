@@ -27,6 +27,7 @@ export function ExpenseNewForm() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
 
   async function handleSave() {
     const amt = Number(amount);
@@ -175,15 +176,41 @@ export function ExpenseNewForm() {
             </div>
           </div>
 
-          {/* Receipt upload placeholder */}
+          {/* Receipt upload */}
           <div>
             <label className="block font-label-caps text-label-caps text-on-surface-variant mb-2">
               แนบหลักฐานการจ่ายเงิน (Optional)
             </label>
-            <div className="border-2 border-dashed border-outline-variant rounded-xl p-8 flex flex-col items-center gap-2 text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer">
-              <span className="material-symbols-outlined text-[32px]">add_a_photo</span>
-              <p className="font-body-md">อัปโหลดรูปภาพใบเสร็จ</p>
-            </div>
+            <label className={`flex flex-col items-center gap-2 p-6 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
+              attachedFile
+                ? "border-primary bg-primary-container/20 text-primary"
+                : "border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary"
+            }`}>
+              <input
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.pdf,.csv,.xlsx"
+                className="hidden"
+                onChange={(e) => setAttachedFile(e.target.files?.[0] ?? null)}
+              />
+              <span className="material-symbols-outlined text-[32px]">
+                {attachedFile ? "attach_file" : "add_a_photo"}
+              </span>
+              <p className="font-body-md text-center">
+                {attachedFile ? attachedFile.name : "อัปโหลดใบเสร็จหรือรายงาน POS"}
+              </p>
+              {attachedFile && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setAttachedFile(null); }}
+                  className="font-label-caps text-label-caps text-on-surface-variant hover:text-error transition-colors"
+                >
+                  ลบไฟล์
+                </button>
+              )}
+            </label>
+            <p className="font-label-caps text-label-caps text-on-surface-variant mt-1.5">
+              รองรับรูปภาพใบเสร็จ, PDF, CSV, Excel
+            </p>
           </div>
 
           {/* Note */}
