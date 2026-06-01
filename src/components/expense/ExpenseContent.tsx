@@ -37,7 +37,7 @@ function getBadgeMeta(category: string): { text: string; textColor: string } {
 const PAGE_SIZE = 10;
 
 export function ExpenseContent() {
-  const { transactions, isLoading, error } = useTransactions();
+  const { transactions, isLoading, error, addTransaction } = useTransactions();
   const { selectedMonth } = useMonthFilter();
 
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
@@ -370,7 +370,21 @@ export function ExpenseContent() {
       <ReceiptScanModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        onConfirm={() => setModalOpen(false)}
+        onConfirm={async (data) => {
+          try {
+            await addTransaction({
+              date: data.date,
+              type: "expense",
+              category: data.category || "อื่นๆ",
+              amount: data.amount,
+              note: data.note || "",
+            } as Parameters<typeof addTransaction>[0]);
+          } catch (e) {
+            console.error("addTransaction error:", e);
+          } finally {
+            setModalOpen(false);
+          }
+        }}
         initialData={scanResult}
       />
 
