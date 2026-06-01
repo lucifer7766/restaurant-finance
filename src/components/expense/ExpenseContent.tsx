@@ -359,8 +359,8 @@ export function ExpenseContent() {
                 const meta = getCategoryMeta(tx.category || "");
                 return (
                   <div key={tx.id} className="overflow-x-auto scrollbar-none hover:bg-surface-container-low transition-colors">
-                    <div className="flex items-center min-w-max">
-                      <div className="grid grid-cols-[52px_1fr_auto] gap-x-3 items-center px-4 py-4 w-[calc(100vw-2rem)] max-w-lg">
+                    <div className="flex items-center">
+                      <div className="grid grid-cols-[52px_1fr_auto] gap-x-3 items-center px-4 py-4 w-full shrink-0">
                         <p className="font-label-caps text-label-caps text-on-surface leading-tight">
                           {formatTransactionDate(tx.date)}
                         </p>
