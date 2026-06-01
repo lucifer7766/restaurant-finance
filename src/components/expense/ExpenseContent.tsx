@@ -264,7 +264,7 @@ export function ExpenseContent() {
                   </span>
                 </div>
                 {/* Category name */}
-                <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">
+                <p className="text-sm font-medium text-on-surface-variant mb-1">
                   {getCategoryLabel(category)}
                 </p>
                 {/* Amount */}
