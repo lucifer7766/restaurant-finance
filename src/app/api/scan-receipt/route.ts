@@ -80,7 +80,9 @@ const TH_MONTHS: Record<string, string> = {
 };
 
 function beToce(year: number): number {
-  return year > 2400 ? year - 543 : year;
+  if (year > 2400) return year - 543;
+  if (year >= 2043 && year <= 2099) return year - 43; // OCR misread 25xx→20xx (5→0)
+  return year;
 }
 
 /** Extract date — supports dd/mm/yyyy, dd-mm-yyyy, yyyy-mm-dd, dd Mon yyyy, dd เดือน yyyy */
