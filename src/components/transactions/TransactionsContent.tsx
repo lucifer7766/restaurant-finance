@@ -428,47 +428,27 @@ export function TransactionsContent() {
         ) : (
           <div className="divide-y divide-surface-container-low">
             {filteredTransactions.map((item) => (
-              <div key={item.id} className="overflow-x-auto scrollbar-none hover:bg-surface-container-low transition-colors">
-                <div className="flex items-center">
-                  <div className="flex items-center gap-3 px-4 py-4 w-full shrink-0">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      item.type === "income" ? "bg-primary-container" : "bg-error-container"
-                    }`}>
-                      <span className={`material-symbols-outlined text-[16px] ${
-                        item.type === "income" ? "text-on-primary-container" : "text-on-error-container"
-                      }`}>
-                        {item.type === "income" ? "arrow_upward" : "arrow_downward"}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-body-md text-on-surface text-sm leading-tight truncate">
-                        {getText(item)}
-                      </p>
-                      <p className="font-label-caps text-label-caps text-on-surface-variant mt-0.5">
-                        {item.category || "-"} · {item.date}
-                      </p>
-                    </div>
-                    <p className={`font-semibold text-sm whitespace-nowrap shrink-0 ${
-                      item.type === "income" ? "text-primary" : "text-error"
-                    }`}>
-                      {item.type === "income" ? "+" : "-"}{formatBaht(item.amount)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 px-3 border-l border-surface-container-low shrink-0">
-                    <button
-                      onClick={() => setEditingTransaction(item)}
-                      className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">edit</span>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
-                    </button>
-                  </div>
+              <div key={item.id} className="px-5 py-4 flex items-center gap-3 hover:bg-surface-container-low transition-colors">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  item.type === "income" ? "bg-primary-container" : "bg-error-container"
+                }`}>
+                  <span className={`material-symbols-outlined text-[18px] ${
+                    item.type === "income" ? "text-on-primary-container" : "text-on-error-container"
+                  }`}>
+                    {item.type === "income" ? "arrow_upward" : "arrow_downward"}
+                  </span>
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-body-md text-on-surface truncate">{getText(item)}</p>
+                  <p className="font-label-caps text-label-caps text-on-surface-variant">
+                    {item.category || "-"} · {item.date}
+                  </p>
+                </div>
+                <p className={`font-semibold text-sm whitespace-nowrap shrink-0 ${
+                  item.type === "income" ? "text-primary" : "text-error"
+                }`}>
+                  {item.type === "income" ? "+" : "-"}{formatBaht(item.amount)}
+                </p>
               </div>
             ))}
           </div>
