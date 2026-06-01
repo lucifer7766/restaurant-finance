@@ -52,10 +52,14 @@ export function ReceiptScanModal({ open, onClose, onConfirm, initialData }: Prop
   useEffect(() => {
     if (!open) return;
     console.log("[OCR_RESULT_TO_MODAL]", initialData);
-    setAmount(initialData?.amount != null ? String(initialData.amount) : "");
-    setDate(initialData?.date ?? TODAY);
+    const _amt = initialData?.amount != null ? String(initialData.amount) : "";
+    const _date = initialData?.date ?? TODAY;
+    const _note = initialData?.note ?? "";
+    alert("OCR_TO_MODAL amount=" + _amt + " date=" + _date + " note=" + _note);
+    setAmount(_amt);
+    setDate(_date);
     setCategory(initialData?.category ?? "อื่นๆ");
-    setNote(initialData?.note ?? "");
+    setNote(_note);
     setError(null);
   }, [open, initialData]);
 
