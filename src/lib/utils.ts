@@ -45,10 +45,33 @@ export const categoryLabels: Record<string, string> = {
   Sales: "รายได้",
   COGS: "ต้นทุนขาย",
   Operations: "ค่าใช้จ่ายดำเนินงาน",
+  // Thai expense categories — normalize any spacing variants
+  "วัตถุดิบ": "วัตถุดิบ",
+  "วัตถุ ดิบ": "วัตถุดิบ",
+  "ค่าแรง": "ค่าแรง",
+  "ค่า แรง": "ค่าแรง",
+  "ค่าเช่า": "ค่าเช่า",
+  "ค่า เช่า": "ค่าเช่า",
+  "ค่าน้ำค่าไฟ": "ค่าน้ำค่าไฟ",
+  "ค่าน้ำ ค่าไฟ": "ค่าน้ำค่าไฟ",
+  "ค่า น้ำ ค่า ไฟ": "ค่าน้ำค่าไฟ",
+  "การตลาด": "การตลาด",
+  "บรรจุภัณฑ์": "บรรจุภัณฑ์",
+  "บรรจุ ภัณฑ์": "บรรจุภัณฑ์",
+  "ซ่อมบำรุง": "ซ่อมบำรุง",
+  "ซ่อม บำรุง": "ซ่อมบำรุง",
+  "อื่นๆ": "อื่นๆ",
+  // Thai income categories
+  "ยอดขายอาหาร": "ยอดขายอาหาร",
+  "ยอดขายเครื่องดื่ม": "ยอดขายเครื่องดื่ม",
+  "เดลิเวอรี": "เดลิเวอรี",
+  "จัดเลี้ยง": "จัดเลี้ยง",
 };
 
 export function getCategoryLabel(category: string): string {
-  return categoryLabels[category] ?? category;
+  if (!category) return "-";
+  const trimmed = category.trim();
+  return categoryLabels[trimmed] ?? trimmed;
 }
 
 export const transactionTypeLabels: Record<"income" | "expense", string> = {
