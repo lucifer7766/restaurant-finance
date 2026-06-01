@@ -37,7 +37,7 @@ function getBadgeMeta(category: string): { text: string; textColor: string } {
 const PAGE_SIZE = 10;
 
 export function ExpenseContent() {
-  const { transactions, isLoading, error, addTransaction } = useTransactions();
+  const { transactions, isLoading, error, addTransaction, deleteTransaction } = useTransactions();
   const { selectedMonth } = useMonthFilter();
 
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
@@ -316,7 +316,7 @@ export function ExpenseContent() {
               {pagedExpenses.map((tx) => {
                 const meta = getCategoryMeta(tx.category || "");
                 return (
-                  <div key={tx.id} className="px-4 py-4 grid grid-cols-[auto_1fr_auto_auto] gap-x-3 items-center hover:bg-surface-container-low transition-colors">
+                  <div key={tx.id} className="px-4 py-4 grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-3 items-center hover:bg-surface-container-low transition-colors">
                     <div className="min-w-[52px]">
                       <p className="font-label-caps text-label-caps text-on-surface leading-tight">
                         {formatTransactionDate(tx.date)}
@@ -336,6 +336,17 @@ export function ExpenseContent() {
                       <p className="font-price-table text-price-table text-on-surface whitespace-nowrap">
                         ฿{tx.amount.toLocaleString("th-TH")}
                       </p>
+                    </div>
+                    <div>
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm("ลบรายการนี้?")) return;
+                          await deleteTransaction(tx.id);
+                        }}
+                        className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
                     </div>
                   </div>
                 );
