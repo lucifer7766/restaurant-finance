@@ -8,7 +8,7 @@ import {
   getMonthlyReportFromTransactions,
   filterTransactionsByMonth,
 } from "@/lib/data";
-import { formatMonthLabel } from "@/lib/utils";
+import { formatMonthLabel, formatTransactionDate } from "@/lib/utils";
 
 function formatMoney(amount: number) {
   return amount.toLocaleString("th-TH", {
