@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
+import { ReceiptScanModal, type ScanResult } from "@/components/expense/ReceiptScanModal";
 
 const EXPENSE_CATEGORY_META: Record<string, { icon: string; iconColor: string; bg: string }> = {
   วัตถุดิบ: { icon: "grocery",       iconColor: "text-on-primary-container",      bg: "bg-primary-container" },
@@ -42,6 +43,48 @@ export function ExpenseContent() {
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
   const [page, setPage] = useState(0);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const FALLBACK_RESULT: ScanResult = {
+    amount: null, date: new Date().toISOString().slice(0, 10),
+    category: null, note: null, confidence: "unreadable",
+  };
+
+  async function handleReceiptFile(file: File) {
+    setReceiptFile(file);
+    setScanning(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // strip "data:image/...;base64," prefix
+          resolve(result.split(",")[1] ?? "");
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch("/api/scan-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64, mimeType: file.type }),
+      });
+
+      const data: ScanResult = res.ok ? await res.json() : FALLBACK_RESULT;
+      setScanResult(data);
+    } catch {
+      setScanResult(FALLBACK_RESULT);
+    } finally {
+      setScanning(false);
+      setModalOpen(true);
+      // reset file input so same file can be reselected
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   const monthLabel = formatMonthLabel(selectedMonth);
 
@@ -111,15 +154,18 @@ export function ExpenseContent() {
           <span className="material-symbols-outlined text-[18px]">add_circle</span>
           เพิ่มรายจ่าย
         </Link>
-        <label className="btn-secondary flex-1 cursor-pointer">
+        <label className={`btn-secondary flex-1 cursor-pointer ${scanning ? "opacity-60 pointer-events-none" : ""}`}>
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*,.pdf"
             className="hidden"
-            onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReceiptFile(f); }}
           />
-          <span className="material-symbols-outlined text-[18px]">photo_camera</span>
-          {receiptFile ? receiptFile.name : "ถ่ายรูปใบเสร็จ"}
+          <span className="material-symbols-outlined text-[18px]">
+            {scanning ? "hourglass_top" : "photo_camera"}
+          </span>
+          {scanning ? "กำลังสแกน..." : "ถ่ายรูปใบเสร็จ"}
         </label>
       </div>
 
@@ -268,6 +314,14 @@ export function ExpenseContent() {
           </>
         )}
       </div>
+
+      {/* ── Receipt Scan Modal ─────────────────────────────── */}
+      <ReceiptScanModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={() => setModalOpen(false)}
+        initialData={scanResult}
+      />
 
     </div>
   );
