@@ -28,11 +28,11 @@ function getCategoryMeta(category: string) {
 }
 
 function getBadgeMeta(category: string): { text: string; textColor: string } {
-  if (category.includes("วัตถุดิบ")) return { text: "+12% vs last month", textColor: "text-on-surface-variant" };
-  if (category.includes("ค่าแรง"))   return { text: "Stable",             textColor: "text-on-surface-variant" };
-  if (category.includes("ค่าเช่า"))  return { text: "Fixed",              textColor: "text-on-surface-variant" };
-  if (category.includes("ไฟฟ้า"))    return { text: "-5% energy saving",  textColor: "text-primary" };
-  if (category.includes("การตลาด"))  return { text: "Variable",           textColor: "text-on-surface-variant" };
+  if (category.includes("วัตถุดิบ")) return { text: "+12% จากเดือนก่อน", textColor: "text-on-surface-variant" };
+  if (category.includes("ค่าแรง"))   return { text: "คงที่",              textColor: "text-on-surface-variant" };
+  if (category.includes("ค่าเช่า"))  return { text: "ราคาคงที่",          textColor: "text-on-surface-variant" };
+  if (category.includes("ไฟฟ้า"))    return { text: "-5% ประหยัดพลังงาน", textColor: "text-primary" };
+  if (category.includes("การตลาด"))  return { text: "ผันแปร",             textColor: "text-on-surface-variant" };
   return { text: "เดือนนี้",          textColor: "text-on-surface-variant" };
 }
 
@@ -195,7 +195,7 @@ export function ExpenseContent() {
       {/* ── Header ─────────────────────────────────────────── */}
       <div>
         <p className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest mb-1">
-          MANAGEMENT DASHBOARD
+          แดชบอร์ดรายจ่าย
         </p>
         <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">
           รายงานรายจ่ายประจำเดือน

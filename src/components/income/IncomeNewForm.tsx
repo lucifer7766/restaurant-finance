@@ -13,10 +13,10 @@ const INCOME_CATEGORIES = [
 ];
 
 const PAYMENT_CHANNELS = [
-  { value: "เงินสด (Cash)", label: "เงินสด (Cash)" },
-  { value: "โอนเงิน (Transfer)", label: "โอนเงิน (Transfer)" },
-  { value: "บัตรเครดิต (Card)", label: "บัตรเครดิต (Card)" },
-  { value: "Prompt Pay", label: "Prompt Pay" },
+  { value: "เงินสด", label: "เงินสด" },
+  { value: "โอนเงิน", label: "โอนเงิน" },
+  { value: "บัตรเครดิต", label: "บัตรเครดิต" },
+  { value: "พร้อมเพย์", label: "พร้อมเพย์" },
 ];
 
 export function IncomeNewForm() {
