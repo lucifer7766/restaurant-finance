@@ -1,20 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import {
   filterTransactionsByMonth,
   getMonthlyReportFromTransactions,
-  getMonthlyStatsFromTransactions,
   getRevenueHistoryFromTransactions,
 } from "@/lib/data";
 import { formatBaht, formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
-
-function getTodayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function DashboardContent() {
   const { selectedMonth } = useMonthFilter();
@@ -27,30 +23,74 @@ export function DashboardContent() {
     return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
   })();
 
-  const report = getMonthlyReportFromTransactions(transactions, selectedMonth);
-  const prevReport = getMonthlyReportFromTransactions(transactions, previousMonthKey);
-  void getMonthlyStatsFromTransactions(transactions, selectedMonth);
-  const revenueHistory = getRevenueHistoryFromTransactions(transactions);
-  const selectedMonthTransactions = filterTransactionsByMonth(transactions, selectedMonth);
+  const report     = useMemo(() => getMonthlyReportFromTransactions(transactions, selectedMonth),     [transactions, selectedMonth]);
+  const prevReport = useMemo(() => getMonthlyReportFromTransactions(transactions, previousMonthKey),  [transactions, previousMonthKey]);
+  const revenueHistory = useMemo(() => getRevenueHistoryFromTransactions(transactions),               [transactions]);
+  const selectedMonthTransactions = useMemo(() => filterTransactionsByMonth(transactions, selectedMonth), [transactions, selectedMonth]);
 
-  const revenueGrowth =
-    prevReport.totalIncome > 0
-      ? ((report.totalIncome - prevReport.totalIncome) / prevReport.totalIncome) * 100
-      : 0;
-  const expenseGrowth =
-    prevReport.totalExpenses > 0
-      ? ((report.totalExpenses - prevReport.totalExpenses) / prevReport.totalExpenses) * 100
-      : 0;
+  const revenueGrowth = prevReport.totalIncome > 0
+    ? ((report.totalIncome - prevReport.totalIncome) / prevReport.totalIncome) * 100
+    : 0;
+  const expenseGrowth = prevReport.totalExpenses > 0
+    ? ((report.totalExpenses - prevReport.totalExpenses) / prevReport.totalExpenses) * 100
+    : 0;
 
-  const today = getTodayKey();
-  const todayTxns = transactions.filter((tx) => tx.date === today);
-  const todayIncome = todayTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const todayExpenses = todayTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-  const todayNet = todayIncome - todayExpenses;
+  /* cumulative net across ALL time = approximate cash position */
+  const cumulativeNet = useMemo(
+    () => transactions.reduce((s, t) => t.type === "income" ? s + t.amount : s - t.amount, 0),
+    [transactions]
+  );
+
+  /* alert banner */
+  const alert = useMemo(() => {
+    if (transactions.length === 0) {
+      return { icon: "info", color: "text-on-surface-variant", message: "สรุปภาพรวมธุรกิจประจำเดือนนี้พร้อมตรวจสอบ" };
+    }
+    if (report.netProfit < 0) {
+      return { icon: "warning", color: "text-error", message: "รายจ่ายสูงกว่ารายรับเดือนนี้ ควรตรวจสอบและลดต้นทุน" };
+    }
+    if (revenueGrowth > 0) {
+      return { icon: "trending_up", color: "text-primary", message: `กำไรเดือนนี้เพิ่มขึ้น ${revenueGrowth.toFixed(1)}% จากเดือนก่อน` };
+    }
+    if (revenueGrowth < 0) {
+      return { icon: "trending_down", color: "text-error", message: `รายรับลดลง ${Math.abs(revenueGrowth).toFixed(1)}% เทียบกับเดือนก่อน ควรเพิ่มยอดขาย` };
+    }
+    return { icon: "info", color: "text-on-surface-variant", message: "สรุปภาพรวมธุรกิจประจำเดือนนี้พร้อมตรวจสอบ" };
+  }, [transactions, report, revenueGrowth]);
+
   const totalExpensesSum = report.expenseBreakdown.reduce((s, e) => s + e.amount, 0);
 
+  /* Loading skeleton */
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <div className="h-7 bg-surface-container-highest rounded w-2/3 mb-2 animate-pulse" />
+          <div className="h-3 bg-surface-container-highest rounded w-1/3 animate-pulse" />
+        </div>
+        <div className="flex gap-3">
+          <div className="flex-1 h-12 bg-surface-container-highest rounded-2xl animate-pulse" />
+          <div className="flex-1 h-12 bg-surface-container-highest rounded-2xl animate-pulse" />
+        </div>
+        <div className="h-14 bg-surface-container-highest rounded-xl animate-pulse" />
+        <div className="grid grid-cols-2 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="metric-card rounded-2xl p-5 animate-pulse">
+              <div className="h-3 bg-surface-container-highest rounded w-1/2 mb-4" />
+              <div className="h-8 bg-surface-container-highest rounded w-3/4" />
+            </div>
+          ))}
+        </div>
+        <div className="metric-card rounded-2xl p-5 animate-pulse">
+          <div className="h-3 bg-surface-container-highest rounded w-1/3 mb-4" />
+          <div className="h-8 bg-surface-container-highest rounded w-1/2" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
 
       {/* ── Page header ────────────────────────────────────── */}
       <div>
@@ -63,15 +103,24 @@ export function DashboardContent() {
       </div>
 
       {/* ── Action buttons ─────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Link href="/transactions" className="btn-primary flex-1 text-center">
+      <div className="flex gap-3">
+        <Link href="/income/new" className="btn-primary flex-1 text-center">
           <span className="material-symbols-outlined text-[18px]">add_circle</span>
           เพิ่มรายรับ
         </Link>
-        <Link href="/transactions" className="btn-secondary flex-1 text-center">
+        <Link href="/expense/new" className="btn-secondary flex-1 text-center">
           <span className="material-symbols-outlined text-[18px]">remove_circle</span>
           เพิ่มรายจ่าย
         </Link>
+      </div>
+
+      {/* ── Alert Banner ───────────────────────────────────── */}
+      <div className="sand-card px-4 py-3 rounded-xl flex items-center gap-3">
+        <span className={`material-symbols-outlined text-[20px] shrink-0 ${alert.color}`}>
+          {alert.icon}
+        </span>
+        <p className="flex-1 font-body-md text-on-surface text-sm">{alert.message}</p>
+        <span className="material-symbols-outlined text-[18px] text-on-surface-variant shrink-0">chevron_right</span>
       </div>
 
       {/* ── Error banner ───────────────────────────────────── */}
@@ -82,116 +131,108 @@ export function DashboardContent() {
         </div>
       )}
 
-      {/* ── Metric cards ───────────────────────────────────── */}
-      {isLoading ? (
-        <div className="space-y-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="metric-card rounded-2xl p-7 animate-pulse">
-              <div className="h-3 bg-surface-container-highest rounded w-1/3 mb-5" />
-              <div className="h-12 bg-surface-container-highest rounded w-2/3" />
+      {/* ── KPI Row 1: รายรับ | รายจ่าย ───────────────────── */}
+      <div className="grid grid-cols-2 gap-3">
+
+        {/* รายรับเดือนนี้ */}
+        <div className="metric-card p-5 rounded-2xl">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
+            รายรับเดือนนี้
+          </span>
+          <div className="flex items-baseline gap-1 text-primary">
+            <span className="text-base font-bold opacity-60">฿</span>
+            <span className="text-2xl font-bold font-headline-md tracking-tight leading-none">
+              {report.totalIncome.toLocaleString("th-TH")}
+            </span>
+          </div>
+          {revenueGrowth !== 0 && (
+            <div className={`mt-2 flex items-center gap-1 ${revenueGrowth > 0 ? "text-primary" : "text-error"}`}>
+              <span className="material-symbols-outlined text-[14px]">
+                {revenueGrowth > 0 ? "trending_up" : "trending_down"}
+              </span>
+              <span className="font-label-caps text-label-caps" style={{ fontSize: "10px" }}>
+                {revenueGrowth > 0 ? "+" : ""}{revenueGrowth.toFixed(1)}%
+              </span>
             </div>
-          ))}
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* รายรับเดือนนี้ */}
-          <div className="metric-card p-7 rounded-2xl">
-            <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-              รายรับเดือนนี้
+        {/* รายจ่ายเดือนนี้ */}
+        <div className="metric-card p-5 rounded-2xl">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
+            รายจ่ายเดือนนี้
+          </span>
+          <div className="flex items-baseline gap-1 text-error">
+            <span className="text-base font-bold opacity-60">฿</span>
+            <span className="text-2xl font-bold font-headline-md tracking-tight leading-none">
+              {report.totalExpenses.toLocaleString("th-TH")}
             </span>
-            <div className="flex items-baseline gap-2 text-primary">
-              <span className="text-2xl font-bold opacity-60">฿</span>
-              <span className="font-display-currency text-display-currency tracking-tight leading-none">
-                {report.totalIncome.toLocaleString("th-TH")}
+          </div>
+          {expenseGrowth !== 0 && (
+            <div className={`mt-2 flex items-center gap-1 ${expenseGrowth > 0 ? "text-error" : "text-primary"}`}>
+              <span className="material-symbols-outlined text-[14px]">
+                {expenseGrowth > 0 ? "trending_up" : "trending_down"}
+              </span>
+              <span className="font-label-caps text-label-caps" style={{ fontSize: "10px" }}>
+                {expenseGrowth > 0 ? "+" : ""}{expenseGrowth.toFixed(1)}%
               </span>
             </div>
-            {revenueGrowth !== 0 && (
-              <div className={`mt-3 flex items-center gap-1.5 ${revenueGrowth > 0 ? "text-primary" : "text-error"}`}>
-                <span className="material-symbols-outlined text-[16px]">
-                  {revenueGrowth > 0 ? "trending_up" : "trending_down"}
-                </span>
-                <span className="font-label-caps text-label-caps">
-                  {revenueGrowth > 0 ? "+" : ""}{revenueGrowth.toFixed(1)}% เทียบกับเดือนก่อน
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* รายจ่ายเดือนนี้ */}
-          <div className="metric-card p-7 rounded-2xl">
-            <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-              รายจ่ายเดือนนี้
-            </span>
-            <div className="flex items-baseline gap-2 text-error">
-              <span className="text-2xl font-bold opacity-60">฿</span>
-              <span className="font-display-currency text-display-currency tracking-tight leading-none">
-                {report.totalExpenses.toLocaleString("th-TH")}
-              </span>
-            </div>
-            {expenseGrowth !== 0 && (
-              <div className={`mt-3 flex items-center gap-1.5 ${expenseGrowth > 0 ? "text-error" : "text-primary"}`}>
-                <span className="material-symbols-outlined text-[16px]">
-                  {expenseGrowth > 0 ? "trending_up" : "trending_down"}
-                </span>
-                <span className="font-label-caps text-label-caps">
-                  {expenseGrowth > 0 ? "+" : ""}{expenseGrowth.toFixed(1)}% เทียบกับเดือนก่อน
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* กำไรสุทธิ */}
-          <div className="metric-card p-7 rounded-2xl">
-            <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-              กำไรสุทธิ
-            </span>
-            <div className={`flex items-baseline gap-2 ${report.netProfit >= 0 ? "text-primary" : "text-error"}`}>
-              <span className="text-2xl font-bold opacity-60">฿</span>
-              <span className="text-4xl font-bold font-headline-md tracking-tight">
-                {Math.abs(report.netProfit).toLocaleString("th-TH")}
-              </span>
-            </div>
-            {report.netProfit < 0 && (
-              <p className="mt-2 font-label-caps text-label-caps text-error">ขาดทุน</p>
-            )}
-          </div>
-
-          {/* อัตรากำไร */}
-          <div className="metric-card p-7 rounded-2xl">
-            <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-              อัตรากำไร
-            </span>
-            <div className="flex items-center gap-4 mb-3">
-              <span className="text-4xl font-bold font-headline-md text-on-surface tracking-tight">
-                {report.profitMargin.toFixed(1)}%
-              </span>
-            </div>
-            <div className="h-2.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all"
-                style={{ width: `${Math.min(Math.max(report.profitMargin, 0), 100)}%` }}
-              />
-            </div>
-          </div>
-
+          )}
         </div>
-      )}
 
-      {/* ── เน็ตวันนี้ ──────────────────────────────────────── */}
-      <div className="metric-card p-6 rounded-2xl">
-        <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">
-          เน็ตวันนี้
+      </div>
+
+      {/* ── KPI Row 2: กำไรสุทธิ | อัตรากำไร ──────────────── */}
+      <div className="grid grid-cols-2 gap-3">
+
+        {/* กำไรสุทธิ */}
+        <div className="metric-card p-5 rounded-2xl">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
+            กำไรสุทธิ
+          </span>
+          <div className={`flex items-baseline gap-1 ${report.netProfit >= 0 ? "text-on-surface" : "text-error"}`}>
+            <span className="text-base font-bold opacity-60">฿</span>
+            <span className="text-2xl font-bold font-headline-md tracking-tight leading-none">
+              {Math.abs(report.netProfit).toLocaleString("th-TH")}
+            </span>
+          </div>
+          {report.netProfit < 0 && (
+            <p className="mt-1 font-label-caps text-label-caps text-error" style={{ fontSize: "10px" }}>ขาดทุน</p>
+          )}
+        </div>
+
+        {/* อัตรากำไร */}
+        <div className="metric-card p-5 rounded-2xl">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
+            อัตรากำไร
+          </span>
+          <span className="text-2xl font-bold font-headline-md text-on-surface tracking-tight">
+            {report.profitMargin.toFixed(1)}%
+          </span>
+          <div className="mt-3 h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all"
+              style={{ width: `${Math.min(Math.max(report.profitMargin, 0), 100)}%` }}
+            />
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── KPI Row 3: ยอดสะสมสุทธิ (full width) ──────────── */}
+      <div className="metric-card p-5 rounded-2xl">
+        <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
+          เงินสดคงเหลือ (สะสม)
         </span>
-        <div className={`flex items-baseline gap-2 ${todayNet >= 0 ? "text-on-surface" : "text-error"}`}>
-          <span className="text-xl font-bold opacity-60">฿</span>
-          <span className="text-3xl font-bold font-headline-md">
-            {Math.abs(todayNet).toLocaleString("th-TH")}
+        <div className={`flex items-baseline gap-2 ${cumulativeNet >= 0 ? "text-on-surface" : "text-error"}`}>
+          <span className="text-2xl font-bold opacity-60">฿</span>
+          <span className="font-display-currency text-display-currency tracking-tight leading-none">
+            {Math.abs(cumulativeNet).toLocaleString("th-TH")}
           </span>
         </div>
-        <p className="mt-2 font-label-caps text-label-caps text-on-surface-variant">
-          รายรับ {formatBaht(todayIncome)} · รายจ่าย {formatBaht(todayExpenses)}
-        </p>
+        {cumulativeNet < 0 && (
+          <p className="mt-1 font-label-caps text-label-caps text-error">ยอดติดลบ</p>
+        )}
       </div>
 
       {/* ── Revenue vs Expenses Chart ───────────────────────── */}
@@ -247,9 +288,7 @@ export function DashboardContent() {
             {selectedMonthTransactions.length} รายการใน{monthLabel}
           </p>
         </div>
-        {isLoading ? (
-          <p className="px-7 py-10 text-center font-body-md text-on-surface-variant">กำลังโหลด...</p>
-        ) : selectedMonthTransactions.length === 0 ? (
+        {selectedMonthTransactions.length === 0 ? (
           <p className="px-7 py-10 text-center font-body-md text-on-surface-variant">ไม่มีรายการใน{monthLabel}</p>
         ) : (
           <>
