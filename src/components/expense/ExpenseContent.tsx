@@ -194,7 +194,7 @@ export function ExpenseContent() {
 
       {/* ── Header ─────────────────────────────────────────── */}
       <div>
-        <p className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest mb-1">
+        <p className="text-xs font-medium text-on-surface-variant tracking-normal mb-1">
           แดชบอร์ดรายจ่าย
         </p>
         <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">

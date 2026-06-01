@@ -97,7 +97,7 @@
   --text-label-caps:              12px;
   --text-label-caps--line-height: 16px;
   --text-label-caps--font-weight: 500;
-  --text-label-caps--letter-spacing: 0.05em;
+  --text-label-caps--letter-spacing: 0;
 
   --text-price-table:              16px;
   --text-price-table--line-height: 24px;

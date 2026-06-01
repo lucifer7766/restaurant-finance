@@ -151,7 +151,7 @@ export function IncomeContent() {
         </div>
       ) : (
         <div className="metric-card p-7 rounded-2xl">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-4 uppercase tracking-widest">
+          <span className="text-xs font-medium text-on-surface-variant block mb-4 tracking-normal">
             รายรับรวมเดือนนี้
           </span>
           <div className="flex items-baseline gap-2 text-primary">
