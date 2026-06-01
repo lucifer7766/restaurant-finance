@@ -26,10 +26,16 @@ export interface PosGroup {
   paymentSummary: string;
 }
 
+export interface PaymentBreakdown {
+  cash: number;
+  transfer: number;
+  card: number;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
-  onConfirm: (groups: PosGroup[]) => Promise<void>;
+  onConfirm: (groups: PosGroup[], payment: PaymentBreakdown) => Promise<void>;
 }
 
 /* ── Column name candidates ── */
@@ -83,7 +89,7 @@ function mapPayment(raw: string): string {
 
 /* ── Parse rows from 2D array (shared by CSV and XLSX) ── */
 
-function parseRows(data: unknown[][]): NormalizedRow[] {
+function parseRows(data: unknown[][]): { rows: NormalizedRow[]; skippedCount: number } {
   if (data.length < 2) throw new Error("ไฟล์ต้องมีหัวตารางและข้อมูลอย่างน้อย 1 แถว");
 
   const headers = (data[0] as string[]).map((h) => String(h ?? "").trim());
@@ -100,6 +106,7 @@ function parseRows(data: unknown[][]): NormalizedRow[] {
   if (!amtCol) throw new Error("ไม่พบคอลัมน์ยอดเงิน (Amount / total / ยอดขาย)");
 
   const rows: NormalizedRow[] = [];
+  let skippedCount = 0;
 
   data.slice(1).forEach((cells, i) => {
     const get = (col: string | null): string => {
@@ -114,7 +121,7 @@ function parseRows(data: unknown[][]): NormalizedRow[] {
 
     const amtRaw = get(amtCol).replace(/[,฿\s]/g, "");
     const amount = parseFloat(amtRaw);
-    if (isNaN(amount) || amount <= 0) return;
+    if (isNaN(amount) || amount <= 0) { skippedCount++; return; }
 
     const typeRaw = get(typeCol).toLowerCase();
     const rowType: "Income" | "Expense" =
@@ -133,12 +140,12 @@ function parseRows(data: unknown[][]): NormalizedRow[] {
   });
 
   if (rows.length === 0) throw new Error("ไม่พบข้อมูลที่ใช้ได้ในไฟล์");
-  return rows;
+  return { rows, skippedCount };
 }
 
 /* ── File parsers ── */
 
-function parseCsvText(text: string): NormalizedRow[] {
+function parseCsvText(text: string): { rows: NormalizedRow[]; skippedCount: number } {
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
   const data = lines.map((line) =>
     line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""))
@@ -146,7 +153,7 @@ function parseCsvText(text: string): NormalizedRow[] {
   return parseRows(data);
 }
 
-function parseExcelBuffer(buffer: ArrayBuffer): NormalizedRow[] {
+function parseExcelBuffer(buffer: ArrayBuffer): { rows: NormalizedRow[]; skippedCount: number } {
   const wb = XLSX.read(buffer, { type: "array", cellDates: false });
   const sheetName =
     wb.SheetNames.find((n) => n.toLowerCase() === "pos_transactions") ??
@@ -201,11 +208,12 @@ function fmt(n: number) {
 /* ── Component ── */
 
 export function PosImportModal({ open, onClose, onConfirm }: Props) {
-  const [rawRows, setRawRows]       = useState<NormalizedRow[]>([]);
-  const [groups, setGroups]         = useState<PosGroup[]>([]);
-  const [parseError, setParseError] = useState<string | null>(null);
-  const [importing, setImporting]   = useState(false);
-  const [fileName, setFileName]     = useState<string | null>(null);
+  const [rawRows, setRawRows]         = useState<NormalizedRow[]>([]);
+  const [groups, setGroups]           = useState<PosGroup[]>([]);
+  const [parseError, setParseError]   = useState<string | null>(null);
+  const [importing, setImporting]     = useState(false);
+  const [fileName, setFileName]       = useState<string | null>(null);
+  const [skippedRows, setSkippedRows] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   if (!open) return null;
@@ -215,6 +223,7 @@ export function PosImportModal({ open, onClose, onConfirm }: Props) {
     setGroups([]);
     setParseError(null);
     setFileName(null);
+    setSkippedRows(0);
     if (fileRef.current) fileRef.current.value = "";
     onClose();
   }
@@ -231,10 +240,11 @@ export function PosImportModal({ open, onClose, onConfirm }: Props) {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const rows = parseCsvText(e.target?.result as string);
+          const { rows, skippedCount } = parseCsvText(e.target?.result as string);
           const incomeRows = rows.filter((r) => r.type === "Income");
           setRawRows(incomeRows);
           setGroups(groupByCategory(incomeRows));
+          setSkippedRows(skippedCount);
         } catch (err) {
           setParseError(err instanceof Error ? err.message : "อ่านไฟล์ไม่สำเร็จ");
         }
@@ -244,10 +254,11 @@ export function PosImportModal({ open, onClose, onConfirm }: Props) {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const rows = parseExcelBuffer(e.target?.result as ArrayBuffer);
+          const { rows, skippedCount } = parseExcelBuffer(e.target?.result as ArrayBuffer);
           const incomeRows = rows.filter((r) => r.type === "Income");
           setRawRows(incomeRows);
           setGroups(groupByCategory(incomeRows));
+          setSkippedRows(skippedCount);
         } catch (err) {
           setParseError(err instanceof Error ? err.message : "อ่านไฟล์ไม่สำเร็จ");
         }
@@ -261,7 +272,8 @@ export function PosImportModal({ open, onClose, onConfirm }: Props) {
   async function handleConfirm() {
     setImporting(true);
     try {
-      await onConfirm(groups);
+      const s = calcPaymentSummary(rawRows);
+      await onConfirm(groups, { cash: s.cash, transfer: s.transfer, card: s.card });
       handleClose();
     } catch (err) {
       setParseError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
@@ -321,6 +333,16 @@ export function PosImportModal({ open, onClose, onConfirm }: Props) {
             <div className="p-4 rounded-xl bg-error-container flex items-start gap-2">
               <span className="material-symbols-outlined text-error text-[18px] shrink-0 mt-0.5">error</span>
               <p className="font-body-md text-on-surface text-sm">{parseError}</p>
+            </div>
+          )}
+
+          {/* Skipped rows warning */}
+          {skippedRows > 0 && (
+            <div className="p-4 rounded-xl bg-tertiary-container flex items-start gap-2">
+              <span className="material-symbols-outlined text-on-tertiary-fixed-variant text-[18px] shrink-0 mt-0.5">warning</span>
+              <p className="font-body-md text-on-surface text-sm">
+                มี {skippedRows} แถวที่ถูกข้าม เพราะยอดขายไม่ถูกต้องหรือเป็น 0
+              </p>
             </div>
           )}
 
