@@ -7,19 +7,30 @@ import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
 
-const EXPENSE_CATEGORY_ICONS: Record<string, { icon: string; color: string; bg: string }> = {
-  วัตถุดิบ: { icon: "grocery", color: "text-on-primary-container", bg: "bg-primary-container" },
-  ค่าแรง: { icon: "groups", color: "text-on-tertiary-fixed-variant", bg: "bg-tertiary-container" },
-  ค่าเช่า: { icon: "home", color: "text-on-secondary-container", bg: "bg-secondary-container" },
-  ไฟฟ้า: { icon: "electric_bolt", color: "text-error", bg: "bg-error-container" },
-  การตลาด: { icon: "campaign", color: "text-on-primary-container", bg: "bg-primary-fixed" },
+const EXPENSE_CATEGORY_META: Record<string, { icon: string; iconColor: string; bg: string }> = {
+  วัตถุดิบ: { icon: "grocery",       iconColor: "text-on-primary-container",      bg: "bg-primary-container" },
+  ค่าแรง:   { icon: "groups",         iconColor: "text-on-tertiary-fixed-variant", bg: "bg-tertiary-container" },
+  ค่าเช่า:  { icon: "home",           iconColor: "text-on-secondary-container",    bg: "bg-secondary-container" },
+  ไฟฟ้า:    { icon: "electric_bolt",  iconColor: "text-error",                     bg: "bg-error-container" },
+  การตลาด:  { icon: "campaign",       iconColor: "text-on-primary-container",      bg: "bg-primary-fixed" },
+  ซ่อมบำรุง: { icon: "build",         iconColor: "text-on-surface-variant",        bg: "bg-surface-container-high" },
+  บรรจุภัณฑ์: { icon: "package_2",   iconColor: "text-on-surface-variant",        bg: "bg-surface-container-high" },
 };
 
-function getCategoryStyle(category: string) {
-  const key = Object.keys(EXPENSE_CATEGORY_ICONS).find((k) => category.includes(k));
+function getCategoryMeta(category: string) {
+  const key = Object.keys(EXPENSE_CATEGORY_META).find((k) => category.includes(k));
   return key
-    ? EXPENSE_CATEGORY_ICONS[key]
-    : { icon: "receipt_long", color: "text-on-surface-variant", bg: "bg-surface-container-high" };
+    ? EXPENSE_CATEGORY_META[key]
+    : { icon: "receipt_long", iconColor: "text-on-surface-variant", bg: "bg-surface-container-high" };
+}
+
+function getBadgeMeta(category: string): { text: string; textColor: string; bgColor: string } {
+  if (category.includes("วัตถุดิบ")) return { text: "+12% vs last month", textColor: "text-error",   bgColor: "" };
+  if (category.includes("ค่าแรง"))   return { text: "Stable",             textColor: "text-on-surface-variant", bgColor: "" };
+  if (category.includes("ค่าเช่า"))  return { text: "Fixed",              textColor: "text-on-surface-variant", bgColor: "" };
+  if (category.includes("ไฟฟ้า"))    return { text: "-5% energy saving",  textColor: "text-primary", bgColor: "" };
+  if (category.includes("การตลาด"))  return { text: "Variable",           textColor: "text-on-surface-variant", bgColor: "" };
+  return { text: "เดือนนี้", textColor: "text-on-surface-variant", bgColor: "" };
 }
 
 const PAGE_SIZE = 10;
@@ -78,12 +89,12 @@ export function ExpenseContent() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
 
       {/* ── Header ─────────────────────────────────────────── */}
       <div>
         <p className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest mb-1">
-          จัดการรายจ่าย
+          MANAGEMENT DASHBOARD
         </p>
         <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">
           รายงานรายจ่ายประจำเดือน
@@ -129,32 +140,29 @@ export function ExpenseContent() {
       ) : (
         <div className="space-y-3">
           {categoryBreakdown.map(({ category, amount }) => {
-            const style = getCategoryStyle(category);
-            const pct = totalExpense > 0 ? (amount / totalExpense) * 100 : 0;
-            const isTop = categoryBreakdown[0]?.category === category;
+            const meta = getCategoryMeta(category);
+            const badge = getBadgeMeta(category);
             return (
               <div key={category} className="metric-card p-6 rounded-2xl">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${style.bg}`}>
-                      <span className={`material-symbols-outlined text-[20px] ${style.color}`}>{style.icon}</span>
-                    </div>
-                    <span className="font-body-md text-on-surface">{getCategoryLabel(category)}</span>
+                {/* Top row: icon + badge */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${meta.bg}`}>
+                    <span className={`material-symbols-outlined text-[20px] ${meta.iconColor}`}>{meta.icon}</span>
                   </div>
-                  {isTop && (
-                    <span className="font-label-caps text-label-caps text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
-                      ข้อมูลเดือนนี้
-                    </span>
-                  )}
+                  <span className={`font-label-caps text-label-caps ${badge.textColor}`}>
+                    {badge.text}
+                  </span>
                 </div>
-                <div className="flex items-baseline gap-1 text-on-surface mt-3">
-                  <span className="text-sm font-bold opacity-60">฿</span>
+                {/* Category name */}
+                <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">
+                  {getCategoryLabel(category)}
+                </p>
+                {/* Amount */}
+                <div className="flex items-baseline gap-1 text-on-surface">
+                  <span className="text-base font-bold opacity-50">฿</span>
                   <span className="text-3xl font-bold font-headline-md tracking-tight">
                     {amount.toLocaleString("th-TH")}
                   </span>
-                </div>
-                <div className="mt-3 h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                  <div className="h-full bg-error rounded-full transition-all" style={{ width: `${pct}%` }} />
                 </div>
               </div>
             );
@@ -164,7 +172,10 @@ export function ExpenseContent() {
 
       {/* ── รายการรายจ่ายล่าสุด ─────────────────────────────── */}
       <div className="metric-card rounded-2xl overflow-hidden">
-        <div className="p-6 pb-4 flex items-center justify-between border-b border-surface-container-low">
+        <div className="p-6 pb-4 flex items-center gap-3 border-b border-surface-container-low">
+          <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center">
+            <span className="material-symbols-outlined text-on-surface-variant text-[18px]">receipt_long</span>
+          </div>
           <h3 className="font-headline-md text-headline-md text-on-surface">รายการรายจ่ายล่าสุด</h3>
         </div>
 
@@ -191,30 +202,30 @@ export function ExpenseContent() {
           <p className="px-6 py-10 text-center font-body-md text-on-surface-variant">ไม่มีรายจ่ายใน{monthLabel}</p>
         ) : (
           <>
-            <div className="px-4 py-2 grid grid-cols-4 border-b border-surface-container-low">
+            <div className="px-4 py-2 grid grid-cols-3 border-b border-surface-container-low">
               <span className="font-label-caps text-label-caps text-on-surface-variant">วันที่</span>
               <span className="font-label-caps text-label-caps text-on-surface-variant">รายการ</span>
-              <span className="font-label-caps text-label-caps text-on-surface-variant">หมวดหมู่</span>
-              <span className="font-label-caps text-label-caps text-on-surface-variant text-right">จำนวนเงิน</span>
+              <span className="font-label-caps text-label-caps text-on-surface-variant text-right">หมวดหมู่</span>
             </div>
             <div className="divide-y divide-surface-container-low">
               {pagedExpenses.map((tx) => {
-                const style = getCategoryStyle(tx.category || "");
+                const meta = getCategoryMeta(tx.category || "");
                 return (
-                  <div key={tx.id} className="px-4 py-4 grid grid-cols-4 items-center hover:bg-surface-container-low transition-colors">
+                  <div key={tx.id} className="px-4 py-4 grid grid-cols-3 items-start gap-2 hover:bg-surface-container-low transition-colors">
                     <div>
-                      <p className="font-label-caps text-label-caps text-on-surface">{formatTransactionDate(tx.date)}</p>
+                      <p className="font-label-caps text-label-caps text-on-surface leading-tight">
+                        {formatTransactionDate(tx.date)}
+                      </p>
                     </div>
                     <div>
-                      <p className="font-body-md text-on-surface text-sm truncate">{tx.description || getCategoryLabel(tx.category)}</p>
-                    </div>
-                    <div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-label-caps text-label-caps ${style.bg} ${style.color}`}>
-                        {getCategoryLabel(tx.category)}
-                      </span>
+                      <p className="font-body-md text-on-surface text-sm leading-tight">
+                        {tx.description || getCategoryLabel(tx.category)}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-price-table text-price-table text-error">฿{tx.amount.toLocaleString("th-TH")}</p>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-label-caps text-label-caps ${meta.bg} ${meta.iconColor}`}>
+                        {getCategoryLabel(tx.category)}
+                      </span>
                     </div>
                   </div>
                 );
@@ -222,7 +233,7 @@ export function ExpenseContent() {
             </div>
             <div className="p-5 border-t border-surface-container-low flex items-center justify-between">
               <span className="font-label-caps text-label-caps text-on-surface-variant">
-                แสดง {filteredExpenses.length === 0 ? 0 : page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredExpenses.length)} จากทั้งหมด {filteredExpenses.length} รายการ
+                Showing {filteredExpenses.length === 0 ? 0 : page * PAGE_SIZE + 1} to {Math.min((page + 1) * PAGE_SIZE, filteredExpenses.length)} of {filteredExpenses.length} expenses
               </span>
               <div className="flex gap-2">
                 <button
