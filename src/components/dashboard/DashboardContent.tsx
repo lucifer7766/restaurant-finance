@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
@@ -16,6 +16,7 @@ const THAI_MONTHS_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","�
 export function DashboardContent() {
   const { selectedMonth } = useMonthFilter();
   const { transactions, isLoading, error } = useTransactions();
+  const [showAllTx, setShowAllTx] = useState(false);
 
   const monthLabel = formatMonthLabel(selectedMonth);
 
@@ -326,25 +327,22 @@ export function DashboardContent() {
 
       {/* ── Recent Transactions ────────────────────────────── */}
       <div className="metric-card rounded-2xl overflow-hidden">
-        <div className="p-7 pb-4">
-          <h3 className="font-headline-md text-headline-md text-on-surface mb-3">รายการล่าสุด</h3>
-          <div className="flex gap-2">
-            <span className="px-3 py-1.5 rounded-full bg-primary text-on-primary font-label-caps text-label-caps">
-              ทั้งหมด
-            </span>
-            <Link href="/income?view=all" className="px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps hover:bg-surface-container-high transition-colors">
-              รายรับ
-            </Link>
-            <Link href="/expense?view=all" className="px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps hover:bg-surface-container-high transition-colors">
-              รายจ่าย
-            </Link>
-          </div>
+        <div className="p-7 pb-0 flex items-center justify-between">
+          <h3 className="font-headline-md text-headline-md text-on-surface">รายการล่าสุด</h3>
+          {selectedMonthTransactions.length > 5 && (
+            <button
+              onClick={() => setShowAllTx((v) => !v)}
+              className="font-label-caps text-label-caps text-primary hover:underline transition-colors"
+            >
+              {showAllTx ? "แสดงน้อยลง" : "รายการทั้งหมด"}
+            </button>
+          )}
         </div>
         {selectedMonthTransactions.length === 0 ? (
           <p className="px-7 py-10 text-center font-body-md text-on-surface-variant">ไม่มีรายการใน{monthLabel}</p>
         ) : (
-          <div className="divide-y divide-surface-container-low">
-            {selectedMonthTransactions.slice(0, 5).map((tx) => (
+          <div className="mt-5 divide-y divide-surface-container-low">
+            {(showAllTx ? selectedMonthTransactions : selectedMonthTransactions.slice(0, 5)).map((tx) => (
               <div key={tx.id} className="px-5 py-4 flex items-center gap-3 hover:bg-surface-container-low transition-colors">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                   tx.type === "income" ? "bg-primary-container" : "bg-error-container"
