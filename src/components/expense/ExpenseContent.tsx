@@ -41,6 +41,7 @@ export function ExpenseContent() {
 
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
   const [page, setPage] = useState(0);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   const monthLabel = formatMonthLabel(selectedMonth);
 
@@ -110,10 +111,16 @@ export function ExpenseContent() {
           <span className="material-symbols-outlined text-[18px]">add_circle</span>
           เพิ่มรายจ่าย
         </Link>
-        <button className="btn-secondary flex-1" disabled>
+        <label className="btn-secondary flex-1 cursor-pointer">
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            className="hidden"
+            onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
+          />
           <span className="material-symbols-outlined text-[18px]">photo_camera</span>
-          ถ่ายรูปใบเสร็จ
-        </button>
+          {receiptFile ? receiptFile.name : "ถ่ายรูปใบเสร็จ"}
+        </label>
       </div>
 
       {error && (

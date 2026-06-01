@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import { useMonthFilter } from "@/context/MonthFilterContext";
@@ -52,6 +52,7 @@ function getCategoryIcon(category: string): string {
 
 export function IncomeContent() {
   const { transactions, isLoading, error } = useTransactions();
+  const [posFile, setPosFile] = useState<File | null>(null);
   const { selectedMonth } = useMonthFilter();
 
   const monthLabel = formatMonthLabel(selectedMonth);
@@ -114,10 +115,16 @@ export function IncomeContent() {
           <span className="material-symbols-outlined text-[18px]">add_circle</span>
           เพิ่มรายรับ
         </Link>
-        <button className="btn-secondary w-full" disabled>
+        <label className="btn-secondary w-full cursor-pointer">
+          <input
+            type="file"
+            accept="image/*,.pdf,.csv,.xlsx"
+            className="hidden"
+            onChange={(e) => setPosFile(e.target.files?.[0] ?? null)}
+          />
           <span className="material-symbols-outlined text-[18px]">upload_file</span>
-          ส่งโหลดรายงาน POS
-        </button>
+          {posFile ? posFile.name : "อัปโหลดรายงาน POS"}
+        </label>
       </div>
 
       {error && (
