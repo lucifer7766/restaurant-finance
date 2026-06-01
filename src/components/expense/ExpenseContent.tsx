@@ -259,7 +259,7 @@ export function ExpenseContent() {
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${meta.bg}`}>
                     <span className={`material-symbols-outlined text-[20px] ${meta.iconColor}`}>{meta.icon}</span>
                   </div>
-                  <span className={`font-label-caps text-label-caps ${badge.textColor}`}>
+                  <span className={`text-xs font-medium tracking-normal ${badge.textColor}`}>
                     {badge.text}
                   </span>
                 </div>
