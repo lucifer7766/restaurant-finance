@@ -397,7 +397,7 @@ export function DashboardContent() {
                       <button onClick={async () => {
                         if (!window.confirm("ลบรายการนี้?")) return;
                         try { await deleteTransaction(tx.id); }
-                        catch (e) { alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ"); }
+                        catch (e) { window.alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ"); }
                       }} className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors">
                         <span className="material-symbols-outlined text-[18px]">delete</span>
                       </button>
