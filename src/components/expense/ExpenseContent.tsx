@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import { useMonthFilter } from "@/context/MonthFilterContext";
@@ -22,9 +22,14 @@ function getCategoryStyle(category: string) {
     : { icon: "receipt_long", color: "text-on-surface-variant", bg: "bg-surface-container-high" };
 }
 
+const PAGE_SIZE = 10;
+
 export function ExpenseContent() {
   const { transactions, isLoading, error } = useTransactions();
   const { selectedMonth } = useMonthFilter();
+
+  const [activeTab, setActiveTab] = useState("ทั้งหมด");
+  const [page, setPage] = useState(0);
 
   const monthLabel = formatMonthLabel(selectedMonth);
 
@@ -53,6 +58,24 @@ export function ExpenseContent() {
       .sort((a, b) => b[1] - a[1])
       .map(([category, amount]) => ({ category, amount }));
   }, [monthExpenses]);
+
+  const tabCategories = useMemo(
+    () => ["ทั้งหมด", ...categoryBreakdown.slice(0, 3).map((c) => c.category)],
+    [categoryBreakdown]
+  );
+
+  const filteredExpenses = useMemo(() => {
+    if (activeTab === "ทั้งหมด") return monthExpenses;
+    return monthExpenses.filter((t) => t.category === activeTab);
+  }, [monthExpenses, activeTab]);
+
+  const totalPages = Math.ceil(filteredExpenses.length / PAGE_SIZE);
+  const pagedExpenses = filteredExpenses.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  function handleTabChange(tab: string) {
+    setActiveTab(tab);
+    setPage(0);
+  }
 
   return (
     <div className="space-y-5">
@@ -147,12 +170,16 @@ export function ExpenseContent() {
 
         {/* Filter tabs */}
         <div className="px-4 py-3 flex gap-2 overflow-x-auto border-b border-surface-container-low">
-          {["ทั้งหมด", ...categoryBreakdown.slice(0, 3).map((c) => c.category)].map((tab, i) => (
-            <button key={tab} className={`px-3 py-1.5 rounded-full font-label-caps text-label-caps shrink-0 transition-colors ${
-              i === 0
-                ? "bg-primary text-on-primary"
-                : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
-            }`}>
+          {tabCategories.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => handleTabChange(tab)}
+              className={`px-3 py-1.5 rounded-full font-label-caps text-label-caps shrink-0 transition-colors ${
+                activeTab === tab
+                  ? "bg-primary text-on-primary"
+                  : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
+              }`}
+            >
               {getCategoryLabel(tab)}
             </button>
           ))}
@@ -171,7 +198,7 @@ export function ExpenseContent() {
               <span className="font-label-caps text-label-caps text-on-surface-variant text-right">จำนวนเงิน</span>
             </div>
             <div className="divide-y divide-surface-container-low">
-              {monthExpenses.slice(0, 10).map((tx) => {
+              {pagedExpenses.map((tx) => {
                 const style = getCategoryStyle(tx.category || "");
                 return (
                   <div key={tx.id} className="px-4 py-4 grid grid-cols-4 items-center hover:bg-surface-container-low transition-colors">
@@ -195,13 +222,21 @@ export function ExpenseContent() {
             </div>
             <div className="p-5 border-t border-surface-container-low flex items-center justify-between">
               <span className="font-label-caps text-label-caps text-on-surface-variant">
-                แสดง 1–{Math.min(10, monthExpenses.length)} จากทั้งหมด {monthExpenses.length} รายการ
+                แสดง {filteredExpenses.length === 0 ? 0 : page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredExpenses.length)} จากทั้งหมด {filteredExpenses.length} รายการ
               </span>
               <div className="flex gap-2">
-                <button className="p-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="p-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
                   <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                 </button>
-                <button className="p-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors">
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="p-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
                   <span className="material-symbols-outlined text-[18px]">chevron_right</span>
                 </button>
               </div>

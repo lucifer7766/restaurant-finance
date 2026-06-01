@@ -1,31 +1,47 @@
 "use client";
 
 import { useMonthFilter } from "@/context/MonthFilterContext";
+import { availableMonths } from "@/lib/data";
 import { formatMonthLabel } from "@/lib/utils";
-
-const START_YEAR = 2025;
-const END_YEAR = 2030;
-
-const MIN_MONTH = `${START_YEAR}-01`;
-const MAX_MONTH = `${END_YEAR}-12`;
 
 export function MonthSelector() {
   const { selectedMonth, setSelectedMonth } = useMonthFilter();
 
+  const currentIndex = availableMonths.indexOf(selectedMonth);
+  const canGoPrev = currentIndex > 0;
+  const canGoNext = currentIndex < availableMonths.length - 1;
+
+  function goPrev() {
+    if (canGoPrev) setSelectedMonth(availableMonths[currentIndex - 1]);
+  }
+
+  function goNext() {
+    if (canGoNext) setSelectedMonth(availableMonths[currentIndex + 1]);
+  }
+
   return (
-    <div className="flex flex-col items-end gap-0.5">
-      <input
-        id="month-filter"
-        type="month"
-        min={MIN_MONTH}
-        max={MAX_MONTH}
-        value={selectedMonth}
-        onChange={(e) => setSelectedMonth(e.target.value)}
-        className="bg-surface-container rounded-xl px-3 py-2 font-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary border-none cursor-pointer"
-      />
-      <p className="font-label-caps text-label-caps text-on-surface-variant pr-1">
+    <div className="flex items-center gap-1">
+      <button
+        onClick={goPrev}
+        disabled={!canGoPrev}
+        className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        aria-label="เดือนก่อนหน้า"
+      >
+        <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+      </button>
+
+      <span className="font-body-md text-on-surface min-w-[6rem] text-center select-none">
         {formatMonthLabel(selectedMonth)}
-      </p>
+      </span>
+
+      <button
+        onClick={goNext}
+        disabled={!canGoNext}
+        className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        aria-label="เดือนถัดไป"
+      >
+        <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+      </button>
     </div>
   );
 }

@@ -222,14 +222,6 @@ export function IncomeContent() {
       <div className="metric-card rounded-2xl overflow-hidden">
         <div className="p-6 pb-0 flex items-center justify-between">
           <h3 className="font-headline-md text-headline-md text-on-surface">รายการล่าสุด</h3>
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors">
-              <span className="material-symbols-outlined text-[20px]">filter_list</span>
-            </button>
-            <button className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors">
-              <span className="material-symbols-outlined text-[20px]">search</span>
-            </button>
-          </div>
         </div>
         {isLoading ? (
           <p className="px-6 py-10 text-center font-body-md text-on-surface-variant">กำลังโหลด...</p>
@@ -267,9 +259,12 @@ export function IncomeContent() {
               </div>
             </div>
             <div className="p-5 border-t border-surface-container-low">
-              <button className="w-full text-center py-3 rounded-xl bg-surface-container font-body-md text-on-surface-variant hover:bg-surface-container-high transition-colors">
+              <Link
+                href="/transactions"
+                className="block w-full text-center py-3 rounded-xl bg-surface-container font-body-md text-on-surface-variant hover:bg-surface-container-high transition-colors"
+              >
                 ดูรายการทั้งหมด
-              </button>
+              </Link>
             </div>
           </>
         )}
