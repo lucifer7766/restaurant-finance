@@ -251,24 +251,30 @@ export function IncomeContent() {
                     channel === "โอนเงิน"    ? "account_balance" :
                     channel === "บัตรเครดิต" ? "credit_card" : "help_outline";
                   return (
-                    <div key={tx.id} className="px-6 py-4 grid grid-cols-3 items-center hover:bg-surface-container-low transition-colors">
-                      <div>
-                        <p className="font-label-caps text-label-caps text-on-surface-variant leading-tight">
+                    <div key={tx.id} className="px-5 py-4 grid grid-cols-[auto_1fr_auto] gap-x-3 items-center hover:bg-surface-container-low transition-colors">
+                      {/* Col 1 — Date */}
+                      <div className="min-w-[64px]">
+                        <p className="font-label-caps text-label-caps text-on-surface leading-snug">
                           {formatTransactionDate(tx.date)}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-surface-container-high flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-on-surface-variant text-[14px]">{txIcon}</span>
+                      {/* Col 2 — Category */}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-surface-container-high flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-on-surface-variant text-[16px]">{txIcon}</span>
                         </div>
-                        <span className="font-body-md text-on-surface text-sm truncate">
+                        <span className="font-body-md text-on-surface text-sm leading-tight truncate">
                           {getCategoryLabel(tx.category)}
                         </span>
                       </div>
-                      <div className="text-right">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container">
-                          <span className="material-symbols-outlined text-on-surface-variant text-[12px]">{channelIcon}</span>
-                          <span className="font-label-caps text-label-caps text-on-surface-variant">
+                      {/* Col 3 — Amount + badge */}
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="font-semibold text-sm text-primary leading-none whitespace-nowrap">
+                          +{formatBaht(tx.amount)}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container whitespace-nowrap">
+                          <span className="material-symbols-outlined text-on-surface-variant text-[11px]">{channelIcon}</span>
+                          <span className="text-[10px] font-medium text-on-surface-variant leading-none">
                             {channel}
                           </span>
                         </span>

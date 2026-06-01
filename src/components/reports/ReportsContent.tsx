@@ -335,10 +335,10 @@ export function ReportsContent() {
                       <td className="px-8 py-4 font-body-md text-on-surface">{category}</td>
                       <td className="px-6 py-4 min-w-[140px]">
                         <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
-                          <div className="h-full bg-error transition-all" style={{ width: `${pct}%` }} />
+                          <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
                         </div>
                       </td>
-                      <td className="px-8 py-4 text-right font-price-table text-price-table text-error">
+                      <td className="px-8 py-4 text-right font-price-table text-price-table text-on-surface">
                         ฿{formatMoney(amount)}
                       </td>
                       <td className="px-8 py-4 text-right font-label-caps text-label-caps text-on-surface-variant">
@@ -380,7 +380,7 @@ export function ReportsContent() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-body-md text-on-surface truncate">{tx.description || tx.category}</p>
-                  <p className="font-label-caps text-label-caps text-on-surface-variant">{tx.category} · {tx.date}</p>
+                  <p className="font-label-caps text-label-caps text-on-surface-variant">{tx.category} · {formatTransactionDate(tx.date)}</p>
                 </div>
                 <div className={`font-price-table text-price-table shrink-0 ${
                   tx.type === "income" ? "text-primary" : "text-error"
@@ -413,9 +413,12 @@ function ProgressRow({
     <div>
       <div className="flex items-center justify-between mb-2">
         <span className="font-body-md text-on-surface">{label}</span>
-        <span className="font-price-table text-price-table text-on-surface-variant">
-          ฿{amount.toLocaleString("th-TH")}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="font-label-caps text-label-caps text-on-surface-variant">{pct.toFixed(1)}%</span>
+          <span className="font-price-table text-price-table text-on-surface-variant">
+            ฿{amount.toLocaleString("th-TH")}
+          </span>
+        </div>
       </div>
       <div className="h-2 bg-surface-container-highest rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all ${colorClass}`} style={{ width: `${pct}%` }} />

@@ -30,6 +30,7 @@ export function IncomeNewForm() {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   /* Today's income summary */
   const today = new Date().toISOString().slice(0, 10);
@@ -46,6 +47,7 @@ export function IncomeNewForm() {
     setError(null);
     setSaving(true);
     try {
+      setSuccess(true);
       await addTransaction({
         date,
         type: "income",
@@ -53,7 +55,7 @@ export function IncomeNewForm() {
         amount: amt,
         note: paymentChannel + (note ? ` — ${note}` : ""),
       } as Parameters<typeof addTransaction>[0]);
-      router.push("/income");
+      setTimeout(() => router.push("/income"), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ กรุณาลองใหม่");
     } finally {
@@ -63,6 +65,14 @@ export function IncomeNewForm() {
 
   return (
     <div className="max-w-lg mx-auto space-y-5 pb-10">
+
+      {/* ── Success toast ───────────────────────────────────── */}
+      {success && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl bg-primary text-on-primary shadow-lg animate-fade-in">
+          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+          <span className="font-body-md font-semibold">บันทึกรายรับสำเร็จ</span>
+        </div>
+      )}
 
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="flex items-center gap-3">

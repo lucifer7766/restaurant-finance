@@ -202,7 +202,7 @@ export function ExpenseContent() {
           <p className="px-6 py-10 text-center font-body-md text-on-surface-variant">ไม่มีรายจ่ายใน{monthLabel}</p>
         ) : (
           <>
-            <div className="px-4 py-2 grid grid-cols-[auto_1fr_auto_auto] gap-x-3 border-b border-surface-container-low">
+            <div className="px-4 py-1 grid grid-cols-[auto_1fr_auto_auto] gap-x-3">
               <span className="font-label-caps text-label-caps text-on-surface-variant">วันที่</span>
               <span className="font-label-caps text-label-caps text-on-surface-variant">รายการ</span>
               <span className="font-label-caps text-label-caps text-on-surface-variant">หมวดหมู่</span>
@@ -212,7 +212,7 @@ export function ExpenseContent() {
               {pagedExpenses.map((tx) => {
                 const meta = getCategoryMeta(tx.category || "");
                 return (
-                  <div key={tx.id} className="px-4 py-4 grid grid-cols-[auto_1fr_auto_auto] gap-x-3 items-start hover:bg-surface-container-low transition-colors">
+                  <div key={tx.id} className="px-4 py-4 grid grid-cols-[auto_1fr_auto_auto] gap-x-3 items-center hover:bg-surface-container-low transition-colors">
                     <div className="min-w-[52px]">
                       <p className="font-label-caps text-label-caps text-on-surface leading-tight">
                         {formatTransactionDate(tx.date)}
@@ -224,12 +224,12 @@ export function ExpenseContent() {
                       </p>
                     </div>
                     <div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-label-caps text-label-caps ${meta.bg} ${meta.iconColor}`}>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full font-label-caps text-label-caps bg-surface-container text-on-surface-variant">
                         {getCategoryLabel(tx.category)}
                       </span>
                     </div>
                     <div className="text-right">
-                      <p className="font-price-table text-price-table text-error whitespace-nowrap">
+                      <p className="font-price-table text-price-table text-on-surface whitespace-nowrap">
                         ฿{tx.amount.toLocaleString("th-TH")}
                       </p>
                     </div>

@@ -21,11 +21,12 @@ export function ExpenseNewForm() {
 
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("วัตถุดิบ (Ingredients)");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [payStatus, setPayStatus] = useState<"paid" | "pending">("paid");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   async function handleSave() {
     const amt = Number(amount);
@@ -36,6 +37,7 @@ export function ExpenseNewForm() {
     setError(null);
     setSaving(true);
     try {
+      setSuccess(true);
       await addTransaction({
         date: saveDate,
         type: "expense",
@@ -43,7 +45,7 @@ export function ExpenseNewForm() {
         amount: amt,
         note: (payStatus === "pending" ? "[ค้างชำระ] " : "") + note,
       } as Parameters<typeof addTransaction>[0]);
-      router.push("/expense");
+      setTimeout(() => router.push("/expense"), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ กรุณาลองใหม่");
     } finally {
@@ -53,6 +55,14 @@ export function ExpenseNewForm() {
 
   return (
     <div className="max-w-lg mx-auto space-y-5 pb-10">
+
+      {/* ── Success toast ───────────────────────────────────── */}
+      {success && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl bg-primary text-on-primary shadow-lg animate-fade-in">
+          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+          <span className="font-body-md font-semibold">บันทึกรายจ่ายสำเร็จ</span>
+        </div>
+      )}
 
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
@@ -88,6 +98,7 @@ export function ExpenseNewForm() {
                 placeholder="0.00"
                 min="0"
                 step="0.01"
+                onKeyDown={(e) => ["-", "e", "E"].includes(e.key) && e.preventDefault()}
                 className="flex-1 text-4xl font-bold font-headline-md text-on-surface bg-transparent outline-none placeholder:text-on-surface-variant/30"
               />
             </div>

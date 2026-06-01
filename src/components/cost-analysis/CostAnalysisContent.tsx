@@ -184,7 +184,7 @@ export function CostAnalysisContent() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="metric-card p-5 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">ต้นทุนรวม</span>
-          <div className="flex items-baseline gap-1 text-error">
+          <div className="flex items-baseline gap-1 text-on-surface">
             <span className="text-base font-bold opacity-60">฿</span>
             <span className="text-2xl font-bold font-headline-md tracking-tight">{formatMoney(totalExpense)}</span>
           </div>
@@ -362,7 +362,7 @@ function SixMonthGroupedChart({
               })}
               <text x={groupCenterX} y={baseY + 12} textAnchor="middle"
                 className="fill-zinc-400" style={{ fontSize: "8px" }}>
-                {d.month.slice(5)}
+                {["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][Number(d.month.slice(5)) - 1]}
               </text>
             </g>
           );
