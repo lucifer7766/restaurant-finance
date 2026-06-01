@@ -72,8 +72,8 @@ export function ReceiptScanModal({ open, onClose, onConfirm, initialData }: Prop
 
   return (
     /* Backdrop */
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50">
-      <div className="w-full max-w-md bg-surface rounded-3xl overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
+      <div className="w-full sm:max-w-md bg-surface sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[90dvh]">
 
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-center gap-3">
@@ -91,16 +91,16 @@ export function ReceiptScanModal({ open, onClose, onConfirm, initialData }: Prop
           </button>
         </div>
 
-        {/* Confidence banner */}
-        {!isUnreadable && initialData?.confidence === "low" && (
-          <div className="mx-6 mb-4 px-4 py-2 bg-tertiary-container rounded-xl flex items-center gap-2">
-            <span className="material-symbols-outlined text-on-tertiary-fixed-variant text-[16px]">warning</span>
-            <span className="font-label-caps text-label-caps text-on-surface-variant">อ่านได้บางส่วน กรุณาตรวจสอบ</span>
-          </div>
-        )}
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 px-6 pt-2 pb-4 space-y-4">
 
-        {/* Form */}
-        <div className="px-6 pb-6 space-y-4">
+          {/* Confidence banner */}
+          {!isUnreadable && initialData?.confidence === "low" && (
+            <div className="px-4 py-2 bg-tertiary-container rounded-xl flex items-center gap-2">
+              <span className="material-symbols-outlined text-on-tertiary-fixed-variant text-[16px]">warning</span>
+              <span className="font-label-caps text-label-caps text-on-surface-variant">อ่านได้บางส่วน กรุณาตรวจสอบ</span>
+            </div>
+          )}
 
           {/* Amount */}
           <div>
@@ -168,23 +168,24 @@ export function ReceiptScanModal({ open, onClose, onConfirm, initialData }: Prop
             </div>
           )}
 
-          {/* Buttons */}
-          <div className="flex gap-3 pt-1">
-            <button
-              onClick={onClose}
-              className="flex-1 py-3 rounded-xl border border-outline-variant font-body-md text-on-surface-variant hover:bg-surface-container transition-colors"
-            >
-              ยกเลิก
-            </button>
-            <button
-              onClick={handleConfirm}
-              className="flex-1 py-3 rounded-xl bg-primary text-on-primary font-body-md font-semibold hover:opacity-90 transition-opacity"
-            >
-              ยืนยันบันทึกรายจ่าย
-            </button>
-          </div>
+        </div>{/* end scrollable body */}
 
+        {/* Sticky footer — always visible */}
+        <div className="px-6 pt-3 pb-[env(safe-area-inset-bottom,16px)] border-t border-surface-container-low bg-surface sm:rounded-b-3xl rounded-b-3xl flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-xl border border-outline-variant font-body-md text-on-surface-variant hover:bg-surface-container transition-colors"
+          >
+            ยกเลิก
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="flex-1 py-3 rounded-xl bg-primary text-on-primary font-body-md font-semibold hover:opacity-90 transition-opacity"
+          >
+            ยืนยันบันทึกรายจ่าย
+          </button>
         </div>
+
       </div>
     </div>
   );
