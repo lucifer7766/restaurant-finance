@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
+import { PosImportModal, type PosGroup } from "@/components/income/PosImportModal";
+import { PosImportHistory, type ImportBatch } from "@/components/income/PosImportHistory";
+import { updateTransaction } from "@/lib/supabase/transactions";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
@@ -42,9 +45,20 @@ const PAYMENT_METHODS = [
 
 const PAGE_SIZE = 10;
 
+const POS_PREFIX = "POS_IMPORT_";
+const LEGACY_POS_MARKER = "POS Import:"; // format เก่าก่อนมี batch ID
+const LEGACY_BATCH_ID = "__LEGACY_POS__";
+
+function parseBatchId(description: string): string | null {
+  if (description.startsWith(POS_PREFIX)) return description.split(" | ")[0].trim();
+  if (description.startsWith(LEGACY_POS_MARKER)) return LEGACY_BATCH_ID;
+  return null;
+}
+
 export function IncomeContent() {
-  const { transactions, isLoading, error, deleteTransaction, refreshTransactions } = useTransactions();
-  const [posFile, setPosFile] = useState<File | null>(null);
+  const { transactions, isLoading, error, addTransaction, deleteTransaction, refreshTransactions } = useTransactions();
+  const [posModalOpen, setPosModalOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const { selectedMonth } = useMonthFilter();
 
   const searchParams = useSearchParams();
@@ -76,6 +90,26 @@ export function IncomeContent() {
     return new Date(y, m, 0).getDate();
   }, [selectedMonth]);
   const dailyAvg = daysInMonth > 0 ? totalIncome / daysInMonth : 0;
+
+  const importBatches = useMemo((): ImportBatch[] => {
+    const map = new Map<string, ImportBatch>();
+    for (const t of allIncome) {
+      const batchId = parseBatchId(t.description || "");
+      if (!batchId) continue;
+      const isLegacy = batchId === LEGACY_BATCH_ID;
+      const ts = isLegacy ? 0 : parseInt(batchId.replace(POS_PREFIX, ""), 10);
+      const importedAt = isNaN(ts) || ts === 0 ? new Date(0) : new Date(ts);
+      const existing = map.get(batchId);
+      const tx = { id: t.id, date: t.date, category: t.category, amount: t.amount, description: t.description };
+      if (existing) {
+        existing.transactions.push(tx);
+        existing.totalAmount += t.amount;
+      } else {
+        map.set(batchId, { batchId, importedAt, transactions: [tx], totalAmount: t.amount, isLegacy });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.importedAt.getTime() - a.importedAt.getTime());
+  }, [allIncome]);
 
   const prevMonthIncome = useMemo(
     () => filterTransactionsByMonth(allIncome, getPrevMonth(selectedMonth)),
@@ -148,17 +182,26 @@ export function IncomeContent() {
           <span className="material-symbols-outlined text-[18px]">add_circle</span>
           เพิ่มรายรับ
         </Link>
-        <label className="btn-secondary flex-1 cursor-pointer">
-          <input
-            type="file"
-            accept="image/*,.pdf,.csv,.xlsx"
-            className="hidden"
-            onChange={(e) => setPosFile(e.target.files?.[0] ?? null)}
-          />
+        <button onClick={() => setPosModalOpen(true)} className="btn-secondary flex-1">
           <span className="material-symbols-outlined text-[18px]">upload_file</span>
-          {posFile ? posFile.name : "อัปโหลดรายงาน POS"}
-        </label>
+          อัปโหลดรายงาน POS
+        </button>
       </div>
+      {importBatches.length > 0 && (
+        <button
+          onClick={() => setHistoryOpen(true)}
+          className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-on-surface-variant text-[18px]">history</span>
+            <span className="font-body-md text-on-surface text-sm">ประวัติการนำเข้า POS</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-on-surface-variant">{importBatches.length} รายงาน</span>
+            <span className="material-symbols-outlined text-on-surface-variant text-[16px]">chevron_right</span>
+          </div>
+        </button>
+      )}
 
       {error && (
         <div className="sand-card p-4 rounded-xl flex items-center gap-3 border-l-4 border-error">
@@ -413,11 +456,76 @@ export function IncomeContent() {
         )}
       </div>
 
+      {/* ── POS Import History Drawer ────────────────────── */}
+      {historyOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
+          <div className="w-full sm:max-w-lg bg-surface sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[92dvh]">
+            <div className="px-6 pt-6 pb-4 flex items-center gap-3 shrink-0">
+              <div className="w-10 h-10 bg-surface-container-high rounded-xl flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-on-surface-variant text-[20px]">history</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-headline-md text-headline-md text-on-surface">ประวัติการนำเข้า POS</h3>
+                <p className="font-label-caps text-label-caps text-on-surface-variant">{importBatches.length} รายงาน</p>
+              </div>
+              <button onClick={() => setHistoryOpen(false)} className="p-2 rounded-xl hover:bg-surface-container transition-colors">
+                <span className="material-symbols-outlined text-on-surface-variant">close</span>
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-6 pb-6">
+              <PosImportHistory
+                batches={importBatches}
+                onDelete={async (batchId, ids) => {
+                  console.log("[POS Delete] batchId:", batchId, "ids:", ids);
+                  try {
+                    for (const id of ids) {
+                      console.log("[POS Delete] deleting id:", id);
+                      await deleteTransaction(id);
+                    }
+                    console.log("[POS Delete] done, refreshing");
+                    await refreshTransactions();
+                  } catch (e) {
+                    console.error("[POS Delete] error:", e);
+                    throw e;
+                  }
+                }}
+                onEdit={async (_batchId, updates) => {
+                  for (const u of updates) {
+                    await updateTransaction(u.id, { date: u.date, category: u.category, amount: u.amount });
+                  }
+                  await refreshTransactions();
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Edit Transaction Modal ────────────────────────── */}
       <EditTransactionModal
         transaction={editingTx}
         onClose={() => setEditingTx(null)}
         onSaved={async () => { setEditingTx(null); await refreshTransactions(); }}
+      />
+
+      {/* ── POS Import Modal ──────────────────────────────── */}
+      <PosImportModal
+        open={posModalOpen}
+        onClose={() => setPosModalOpen(false)}
+        onConfirm={async (groups: PosGroup[]) => {
+          if (groups.length === 0) throw new Error("ไม่มีข้อมูลให้บันทึก");
+          const batchId = `${POS_PREFIX}${Date.now()}`;
+          for (const g of groups) {
+            await addTransaction({
+              date: g.date,
+              type: "income" as const,
+              category: g.category,
+              amount: g.amount,
+              note: `${batchId} | ${g.category} | รวม ${g.count} รายการ`,
+            });
+          }
+          await refreshTransactions();
+        }}
       />
 
     </div>
