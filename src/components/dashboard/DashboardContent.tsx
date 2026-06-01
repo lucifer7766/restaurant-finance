@@ -8,9 +8,10 @@ import { useTransactions } from "@/components/transactions/TransactionsContent";
 import {
   filterTransactionsByMonth,
   getMonthlyReportFromTransactions,
-  getRevenueHistoryFromTransactions,
 } from "@/lib/data";
 import { formatBaht, formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
+
+const THAI_MONTHS_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
 export function DashboardContent() {
   const { selectedMonth } = useMonthFilter();
@@ -25,8 +26,36 @@ export function DashboardContent() {
 
   const report     = useMemo(() => getMonthlyReportFromTransactions(transactions, selectedMonth),     [transactions, selectedMonth]);
   const prevReport = useMemo(() => getMonthlyReportFromTransactions(transactions, previousMonthKey),  [transactions, previousMonthKey]);
-  const revenueHistory = useMemo(() => getRevenueHistoryFromTransactions(transactions),               [transactions]);
   const selectedMonthTransactions = useMemo(() => filterTransactionsByMonth(transactions, selectedMonth), [transactions, selectedMonth]);
+
+  /* weekly cumulative chart data for selected month */
+  const weeklyChartData = useMemo(() => {
+    const [y, m] = selectedMonth.split("-").map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const monthAbbr = THAI_MONTHS_SHORT[m - 1];
+    const monthTxns = filterTransactionsByMonth(transactions, selectedMonth);
+
+    const today = new Date();
+    const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    const isCurrentMonth = selectedMonth === currentMonthKey;
+    const lastDay = isCurrentMonth ? today.getDate() : daysInMonth;
+
+    const rawPoints = [
+      { day: 7,      label: `7 ${monthAbbr}` },
+      { day: 14,     label: `14 ${monthAbbr}` },
+      { day: 21,     label: `21 ${monthAbbr}` },
+      { day: lastDay, label: isCurrentMonth ? "วันนี้" : `${daysInMonth} ${monthAbbr}` },
+    ].filter((p, i, arr) => i === 0 || p.day > arr[i - 1].day);
+
+    return rawPoints.map(({ day, label }) => {
+      const txns = monthTxns.filter((tx) => parseInt(tx.date.slice(8, 10)) <= day);
+      return {
+        month: label,
+        revenue: txns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
+        expenses: txns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
+      };
+    });
+  }, [transactions, selectedMonth]);
 
   const revenueGrowth = prevReport.totalIncome > 0
     ? ((report.totalIncome - prevReport.totalIncome) / prevReport.totalIncome) * 100
@@ -236,13 +265,28 @@ export function DashboardContent() {
       </div>
 
       {/* ── Revenue vs Expenses Chart ───────────────────────── */}
-      <div className="metric-card p-7 rounded-2xl">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-headline-md text-headline-md text-on-surface">
-            แนวโน้มรายรับ vs รายจ่าย
-          </h3>
+      <div className="metric-card p-6 rounded-2xl">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface">
+              แนวโน้มรายรับ vs รายจ่าย
+            </h3>
+            <p className="font-label-caps text-label-caps text-on-surface-variant mt-0.5">
+              สะสมรายสัปดาห์ · {monthLabel}
+            </p>
+          </div>
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="flex items-center gap-1.5">
+              <div className="w-6 h-0.5 rounded-full bg-primary" />
+              <span className="font-label-caps text-label-caps text-on-surface-variant">รายรับ</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-6 h-0.5 rounded-full bg-error" />
+              <span className="font-label-caps text-label-caps text-on-surface-variant">รายจ่าย</span>
+            </div>
+          </div>
         </div>
-        <RevenueChart data={revenueHistory} />
+        <RevenueChart data={weeklyChartData} />
       </div>
 
       {/* ── Expense Breakdown ──────────────────────────────── */}

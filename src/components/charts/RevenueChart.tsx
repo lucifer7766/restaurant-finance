@@ -115,32 +115,19 @@ export function RevenueChart({ data }: RevenueChartProps) {
                 <circle cx={x} cy={getY(point.expenses)} r="0.9" fill="#ba1a1a">
                   <title>{`${point.month} รายจ่าย: ${formatBaht(point.expenses)}`}</title>
                 </circle>
-                {/* Show every other month label to avoid crowding */}
-                {i % 2 === 0 && (
-                  <text
-                    x={x} y={baseY + 9}
-                    textAnchor="middle"
-                    className="fill-zinc-400" style={{ fontSize: "2.8px" }}
-                  >
-                    {point.month}
-                  </text>
-                )}
+                <text
+                  x={x} y={baseY + 9}
+                  textAnchor="middle"
+                  className="fill-zinc-400" style={{ fontSize: "2.8px" }}
+                >
+                  {point.month}
+                </text>
               </g>
             );
           })}
         </svg>
       </div>
 
-      <div className="mt-3 flex items-center justify-center gap-6">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-0.5 rounded-full bg-primary" />
-          <span className="font-label-caps text-label-caps text-on-surface-variant">รายรับ</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-0.5 rounded-full bg-error" />
-          <span className="font-label-caps text-label-caps text-on-surface-variant">รายจ่าย</span>
-        </div>
-      </div>
     </div>
   );
 }
