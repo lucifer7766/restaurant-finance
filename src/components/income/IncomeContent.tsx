@@ -8,6 +8,7 @@ import EditTransactionModal from "@/components/transactions/EditTransactionModal
 import { PosImportModal, type PosGroup } from "@/components/income/PosImportModal";
 import { PosImportHistory, type ImportBatch } from "@/components/income/PosImportHistory";
 import { updateTransaction } from "@/lib/supabase/transactions";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
@@ -475,19 +476,39 @@ export function IncomeContent() {
             <div className="overflow-y-auto flex-1 px-6 pb-6">
               <PosImportHistory
                 batches={importBatches}
-                onDelete={async (batchId, ids) => {
-                  console.log("[POS Delete] batchId:", batchId, "ids:", ids);
-                  try {
-                    for (const id of ids) {
-                      console.log("[POS Delete] deleting id:", id);
-                      await deleteTransaction(id);
-                    }
-                    console.log("[POS Delete] done, refreshing");
-                    await refreshTransactions();
-                  } catch (e) {
-                    console.error("[POS Delete] error:", e);
-                    throw e;
+                onDelete={async (batchId) => {
+                  console.log("[POS Delete] batchId:", batchId);
+                  const supabase = getSupabaseClient();
+
+                  // 1. query หา records จาก note field จริงใน DB
+                  const { data: found, error: findError } = await supabase
+                    .from("transactions")
+                    .select("id")
+                    .ilike("note", `%${batchId}%`);
+
+                  if (findError) {
+                    console.error("[POS Delete] find error:", findError);
+                    throw new Error(findError.message);
                   }
+
+                  const ids = (found ?? []).map((r: { id: string }) => r.id);
+                  console.log("[POS Delete] records found:", ids.length, ids);
+
+                  if (ids.length === 0) throw new Error("ไม่พบรายการรายรับของ import นี้");
+
+                  // 2. delete ทีเดียว
+                  const { error: delError } = await supabase
+                    .from("transactions")
+                    .delete()
+                    .in("id", ids);
+
+                  if (delError) {
+                    console.error("[POS Delete] delete error:", delError);
+                    throw new Error(delError.message);
+                  }
+
+                  console.log("[POS Delete] deleted", ids.length, "records");
+                  await refreshTransactions();
                 }}
                 onEdit={async (_batchId, updates) => {
                   for (const u of updates) {

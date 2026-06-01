@@ -22,7 +22,7 @@ export interface ImportBatch {
 
 interface Props {
   batches: ImportBatch[];
-  onDelete: (batchId: string, transactionIds: string[]) => Promise<void>;
+  onDelete: (batchId: string) => Promise<void>;
   onEdit: (batchId: string, updates: { id: string; date: string; category: string; amount: number }[]) => Promise<void>;
 }
 
@@ -84,7 +84,7 @@ function EditBatchModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
       <div className="w-full sm:max-w-lg bg-surface sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[92dvh]">
 
         <div className="px-6 pt-6 pb-4 flex items-center gap-3 shrink-0">
@@ -183,7 +183,7 @@ function DeleteConfirmModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
       <div className="w-full sm:max-w-sm bg-surface sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col">
         <div className="px-6 pt-6 pb-4">
           <div className="w-10 h-10 bg-error-container rounded-xl flex items-center justify-center mb-4">
@@ -305,10 +305,7 @@ export function PosImportHistory({ batches, onDelete, onEdit }: Props) {
           batch={deletingBatch}
           onClose={() => setDeletingBatch(null)}
           onConfirm={async () => {
-            await onDelete(
-              deletingBatch.batchId,
-              deletingBatch.transactions.map((t) => t.id)
-            );
+            await onDelete(deletingBatch.batchId);
             setDeletingBatch(null);
           }}
         />
