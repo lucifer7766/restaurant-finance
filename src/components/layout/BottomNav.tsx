@@ -8,6 +8,7 @@ const navItems = [
   { href: "/dashboard", label: "แดชบอร์ด", icon: "dashboard" },
   { href: "/transactions", label: "รายการ", icon: "receipt_long" },
   { href: "/reports", label: "รายงาน", icon: "leaderboard" },
+  { href: "/cost-analysis", label: "ต้นทุน", icon: "analytics" },
 ];
 
 export function BottomNav() {

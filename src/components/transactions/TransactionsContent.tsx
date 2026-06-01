@@ -284,88 +284,76 @@ export function TransactionsContent() {
   return (
     <div className="space-y-stack-md">
       {/* ── Header row ─────────────────────────────────────────────────────── */}
-      <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">
-            รายการทั้งหมด
-          </h2>
-          <p className="font-body-md text-on-surface-variant">
-            จัดการรายรับและรายจ่าย
-          </p>
-        </div>
+      <div>
+        <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-0.5">
+          รายการทั้งหมด
+        </h2>
+        <p className="font-label-caps text-label-caps text-on-surface-variant">
+          จัดการรายรับและรายจ่าย
+        </p>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Export buttons */}
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-outline-variant font-body-md text-on-surface-variant hover:bg-surface-container transition-all"
-          >
-            <span className="material-symbols-outlined text-[18px]">download</span>
-            CSV
-          </button>
+      {/* ── Primary action buttons ──────────────────────────── */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button
+          onClick={() => openAddModal("income")}
+          className="btn-primary flex-1"
+        >
+          <span className="material-symbols-outlined text-[18px]">add_circle</span>
+          เพิ่มรายรับ
+        </button>
+        <button
+          onClick={() => openAddModal("expense")}
+          className="btn-secondary flex-1"
+        >
+          <span className="material-symbols-outlined text-[18px]">remove_circle</span>
+          เพิ่มรายจ่าย
+        </button>
+      </div>
 
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-primary font-body-md text-primary hover:bg-primary-container/20 transition-all"
-          >
-            <span className="material-symbols-outlined text-[18px]">table_view</span>
-            Excel
-          </button>
-
-          {/* Add buttons */}
-          <button
-            onClick={() => openAddModal("income")}
-            className="flex items-center gap-2 bg-primary text-on-primary px-5 py-2.5 rounded-xl font-body-md hover:opacity-90 transition-all shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[18px]">add_circle</span>
-            เพิ่มรายรับ
-          </button>
-
-          <button
-            onClick={() => openAddModal("expense")}
-            className="flex items-center gap-2 bg-primary-container text-on-primary-container px-5 py-2.5 rounded-xl font-body-md hover:opacity-90 transition-all shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[18px]">remove_circle</span>
-            เพิ่มรายจ่าย
-          </button>
-        </div>
-      </section>
+      {/* ── Export buttons ─────────────────────────────────── */}
+      <div className="flex gap-2 justify-end">
+        <button
+          onClick={handleExportCSV}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container transition-all"
+        >
+          <span className="material-symbols-outlined text-[16px]">download</span>
+          CSV
+        </button>
+        <button
+          onClick={handleExportExcel}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-primary font-label-caps text-label-caps text-primary hover:bg-primary-container/20 transition-all"
+        >
+          <span className="material-symbols-outlined text-[16px]">table_view</span>
+          Excel
+        </button>
+      </div>
 
       {/* ── Summary cards ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-gutter">
-        <div className="metric-card p-6 rounded-2xl border border-surface-variant">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">
-            รายรับรวม
-          </span>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="metric-card p-6 rounded-2xl">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายรับรวม</span>
           <div className="flex items-baseline gap-1.5 text-primary">
-            <span className="text-lg font-bold opacity-70">฿</span>
-            <span className="text-2xl font-bold font-headline-md">
+            <span className="text-xl font-bold opacity-60">฿</span>
+            <span className="text-3xl font-bold font-headline-md tracking-tight">
               {summaryIncome.toLocaleString("th-TH")}
             </span>
           </div>
         </div>
-
-        <div className="metric-card p-6 rounded-2xl border border-surface-variant">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">
-            รายจ่ายรวม
-          </span>
+        <div className="metric-card p-6 rounded-2xl">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายจ่ายรวม</span>
           <div className="flex items-baseline gap-1.5 text-error">
-            <span className="text-lg font-bold opacity-70">฿</span>
-            <span className="text-2xl font-bold font-headline-md">
+            <span className="text-xl font-bold opacity-60">฿</span>
+            <span className="text-3xl font-bold font-headline-md tracking-tight">
               {summaryExpense.toLocaleString("th-TH")}
             </span>
           </div>
         </div>
-
-        <div className="metric-card p-6 rounded-2xl border border-surface-variant">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">
-            กำไรสุทธิ
-          </span>
-          <div
-            className={`flex items-baseline gap-1.5 ${summaryNet >= 0 ? "text-primary" : "text-error"}`}
-          >
-            <span className="text-lg font-bold opacity-70">฿</span>
-            <span className="text-2xl font-bold font-headline-md">
+        <div className="metric-card p-6 rounded-2xl">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">กำไรสุทธิ</span>
+          <div className={`flex items-baseline gap-1.5 ${summaryNet >= 0 ? "text-primary" : "text-error"}`}>
+            <span className="text-xl font-bold opacity-60">฿</span>
+            <span className="text-3xl font-bold font-headline-md tracking-tight">
               {Math.abs(summaryNet).toLocaleString("th-TH")}
             </span>
           </div>
@@ -381,7 +369,7 @@ export function TransactionsContent() {
       )}
 
       {/* ── Filter bar ─────────────────────────────────────────────────────── */}
-      <div className="metric-card p-4 rounded-2xl border border-surface-variant flex flex-col gap-4 md:flex-row md:items-center">
+      <div className="metric-card p-4 rounded-2xl flex flex-col gap-4 md:flex-row md:items-center">
         {/* Type tabs */}
         <div className="flex rounded-xl bg-surface-container p-1 gap-1 shrink-0">
           {tabs.map((tab) => (
@@ -428,7 +416,7 @@ export function TransactionsContent() {
       </div>
 
       {/* ── Transactions table ─────────────────────────────────────────────── */}
-      <section className="metric-card rounded-2xl border border-surface-variant overflow-hidden">
+      <section className="metric-card rounded-2xl overflow-hidden">
         {isLoading ? (
           <div className="p-10 text-center font-body-md text-on-surface-variant">
             กำลังโหลด...

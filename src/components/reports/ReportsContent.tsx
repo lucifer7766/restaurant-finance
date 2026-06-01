@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useCallback } from "react";
 import * as XLSX from "xlsx";
-import { fetchTransactions } from "@/lib/supabase/transactions";
-import { MonthlySummaryChart } from "@/components/charts/MonthlySummaryChart";
-
-type Transaction = {
-  id: string;
-  type: "income" | "expense";
-  amount: number;
-  category: string;
-  note?: string | null;
-  date: string;
-};
+import { useTransactions } from "@/components/transactions/TransactionsContent";
+import { useMonthFilter } from "@/context/MonthFilterContext";
+import {
+  getMonthlyReportFromTransactions,
+  filterTransactionsByMonth,
+} from "@/lib/data";
+import { formatMonthLabel } from "@/lib/utils";
 
 function formatMoney(amount: number) {
   return amount.toLocaleString("th-TH", {
@@ -21,173 +17,150 @@ function formatMoney(amount: number) {
   });
 }
 
+function getPrevMonthKey(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  if (m === 1) return `${y - 1}-12`;
+  return `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+
 /* ─── ReportsContent ─────────────────────────────────────────────────────── */
 
 export function ReportsContent() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { transactions, isLoading, error: loadError } = useTransactions();
+  const { selectedMonth } = useMonthFilter();
 
-  useEffect(() => {
-    async function loadTransactions() {
-      try {
-        const data = await fetchTransactions();
-        setTransactions(data as Transaction[]);
-        setLoadError(null);
-      } catch (error) {
-        setLoadError(error instanceof Error ? error.message : "โหลดข้อมูลไม่สำเร็จ");
-      } finally {
-        setLoading(false);
-      }
-    }
+  const report = useMemo(
+    () => getMonthlyReportFromTransactions(transactions, selectedMonth),
+    [transactions, selectedMonth]
+  );
 
-    loadTransactions();
-  }, []);
+  const prevReport = useMemo(
+    () => getMonthlyReportFromTransactions(transactions, getPrevMonthKey(selectedMonth)),
+    [transactions, selectedMonth]
+  );
 
-  const summary = useMemo(() => {
-    const income = transactions
-      .filter((item) => item.type === "income")
-      .reduce((sum, item) => sum + Number(item.amount), 0);
+  const recentTxns = useMemo(
+    () => filterTransactionsByMonth(transactions, selectedMonth).slice(0, 10),
+    [transactions, selectedMonth]
+  );
 
-    const expense = transactions
-      .filter((item) => item.type === "expense")
-      .reduce((sum, item) => sum + Number(item.amount), 0);
+  const { income, expense, profit, margin } = useMemo(() => ({
+    income: report.totalIncome,
+    expense: report.totalExpenses,
+    profit: report.netProfit,
+    margin: report.profitMargin,
+  }), [report]);
 
-    const profit = income - expense;
-    const margin = income > 0 ? (profit / income) * 100 : 0;
-
-    return { income, expense, profit, margin };
-  }, [transactions]);
-
-  const expenseByCategory = useMemo(() => {
-    const result: Record<string, number> = {};
-
-    transactions
-      .filter((item) => item.type === "expense")
-      .forEach((item) => {
-        result[item.category] =
-          (result[item.category] || 0) + Number(item.amount);
-      });
-
-    return Object.entries(result)
-      .map(([category, amount]) => ({ category, amount }))
-      .sort((a, b) => b.amount - a.amount);
-  }, [transactions]);
+  const growthIncome =
+    prevReport.totalIncome > 0
+      ? ((income - prevReport.totalIncome) / prevReport.totalIncome) * 100
+      : 0;
 
   const aiSummary = useMemo(() => {
-    const topExpense = expenseByCategory[0];
+    const topExpense = report.expenseBreakdown[0];
 
-    let profitText = "";
-    if (summary.profit > 0) {
-      profitText = `ร้านมีกำไร ฿${formatMoney(summary.profit)} ถือว่ายังบริหารได้ดี`;
-    } else if (summary.profit < 0) {
-      profitText = `ร้านขาดทุน ฿${formatMoney(Math.abs(summary.profit))} ควรรีบตรวจรายจ่าย`;
-    } else {
-      profitText = "ร้านยังไม่มีกำไรหรือขาดทุน รายรับกับรายจ่ายเท่ากัน";
-    }
+    const profitText =
+      profit > 0
+        ? `เดือนนี้มีกำไร ฿${formatMoney(profit)}`
+        : profit < 0
+        ? `เดือนนี้ขาดทุน ฿${formatMoney(Math.abs(profit))} ควรรีบตรวจรายจ่าย`
+        : "รายรับกับรายจ่ายเท่ากันพอดี";
 
-    let marginText = "";
-    if (summary.margin >= 30) {
-      marginText = `อัตรากำไร ${summary.margin.toFixed(2)}% อยู่ในระดับดี`;
-    } else if (summary.margin >= 10) {
-      marginText = `อัตรากำไร ${summary.margin.toFixed(2)}% พอใช้ แต่ยังควรคุมต้นทุน`;
-    } else if (summary.income > 0) {
-      marginText = `อัตรากำไร ${summary.margin.toFixed(2)}% ค่อนข้างต่ำ ควรลดต้นทุนหรือเพิ่มยอดขาย`;
-    } else {
-      marginText = "ยังไม่มีรายรับ จึงยังวิเคราะห์ Margin ไม่ได้";
-    }
+    const marginText =
+      margin >= 30
+        ? `อัตรากำไร ${margin.toFixed(1)}% อยู่ในระดับดี`
+        : margin >= 10
+        ? `อัตรากำไร ${margin.toFixed(1)}% พอใช้ แต่ยังควรคุมต้นทุน`
+        : income > 0
+        ? `อัตรากำไร ${margin.toFixed(1)}% ค่อนข้างต่ำ ควรลดต้นทุน`
+        : "ยังไม่มีรายรับเดือนนี้";
 
     const topExpenseText = topExpense
-      ? `หมวดค่าใช้จ่ายสูงสุดคือ ${topExpense.category} จำนวน ฿${formatMoney(topExpense.amount)}`
+      ? `ค่าใช้จ่ายสูงสุด: ${topExpense.category} ฿${formatMoney(topExpense.amount)}`
       : "ยังไม่มีข้อมูลค่าใช้จ่าย";
 
     const advice =
-      summary.expense > summary.income
-        ? "คำแนะนำ: ลดค่าใช้จ่ายที่ไม่จำเป็นก่อน แล้วดูหมวดที่ใช้เงินเยอะที่สุด"
-        : "คำแนะนำ: รักษาระดับต้นทุน และเพิ่มยอดขายจากเมนูหรือช่วงเวลาที่ขายดี";
+      expense > income
+        ? "คำแนะนำ: ลดค่าใช้จ่ายที่ไม่จำเป็น ดูหมวดที่ใช้เงินเยอะที่สุด"
+        : "คำแนะนำ: รักษาระดับต้นทุน และเพิ่มยอดขายจากเมนูที่ขายดี";
 
-    return { topExpenseText, profitText, marginText, advice };
-  }, [summary, expenseByCategory]);
+    return { profitText, marginText, topExpenseText, advice };
+  }, [report, income, expense, profit, margin]);
 
-  function exportCSV() {
+  /* ── Export helpers ─────────────────────────────────────────────────────── */
+
+  const exportCSV = useCallback(() => {
     const rows = [
       ["Report", "Amount"],
-      ["Income", summary.income],
-      ["Expense", summary.expense],
-      ["Profit", summary.profit],
-      ["Margin (%)", summary.margin.toFixed(2)],
+      ["Income", income],
+      ["Expense", expense],
+      ["Profit", profit],
+      ["Margin (%)", margin.toFixed(2)],
       [],
       ["AI Summary"],
-      [aiSummary.topExpenseText],
       [aiSummary.profitText],
       [aiSummary.marginText],
+      [aiSummary.topExpenseText],
       [aiSummary.advice],
       [],
       ["Expense Category", "Amount"],
-      ...expenseByCategory.map((item) => [item.category, item.amount]),
+      ...report.expenseBreakdown.map((item) => [item.category, item.amount]),
     ];
-
     const csvContent = rows.map((row) => row.join(",")).join("\n");
-    const blob = new Blob(["﻿" + csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
-
+    const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "reports-summary.csv";
+    link.download = `reports-${selectedMonth}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-  }
+  }, [income, expense, profit, margin, aiSummary, report, selectedMonth]);
 
-  function exportExcel() {
+  const exportExcel = useCallback(() => {
     const summarySheet = [
       ["Report", "Amount"],
-      ["Income", summary.income],
-      ["Expense", summary.expense],
-      ["Profit", summary.profit],
-      ["Margin (%)", Number(summary.margin.toFixed(2))],
+      ["Income", income],
+      ["Expense", expense],
+      ["Profit", profit],
+      ["Margin (%)", Number(margin.toFixed(2))],
       [],
       ["AI Summary"],
-      [aiSummary.topExpenseText],
       [aiSummary.profitText],
       [aiSummary.marginText],
+      [aiSummary.topExpenseText],
       [aiSummary.advice],
     ];
-
     const expenseSheet = [
       ["Expense Category", "Amount"],
-      ...expenseByCategory.map((item) => [item.category, item.amount]),
+      ...report.expenseBreakdown.map((item) => [item.category, item.amount]),
     ];
-
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summarySheet), "Summary");
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(expenseSheet), "Expense Breakdown");
-    XLSX.writeFile(workbook, "reports-summary.xlsx");
-  }
+    XLSX.writeFile(workbook, `reports-${selectedMonth}.xlsx`);
+  }, [income, expense, profit, margin, aiSummary, report, selectedMonth]);
 
-  /* ══ Loading ══ */
-  if (loading) {
+  const exportPDF = useCallback(() => {
+    window.print();
+  }, []);
+
+  /* ── Loading skeleton ───────────────────────────────────────────────────── */
+  if (isLoading) {
     return (
-      <div className="space-y-stack-md">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="metric-card rounded-2xl border border-surface-variant p-8 animate-pulse"
-            >
-              <div className="h-3 bg-surface-container-highest rounded w-1/3 mb-6" />
-              <div className="h-8 bg-surface-container-highest rounded w-2/3" />
-            </div>
-          ))}
-        </div>
+      <div className="space-y-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="metric-card rounded-2xl p-7 animate-pulse">
+            <div className="h-3 bg-surface-container-highest rounded w-1/3 mb-6" />
+            <div className="h-10 bg-surface-container-highest rounded w-2/3" />
+          </div>
+        ))}
       </div>
     );
   }
 
-  /* ══ JSX ══ */
+  /* ── JSX ────────────────────────────────────────────────────────────────── */
   return (
-    <div className="space-y-stack-md">
+    <div className="space-y-4">
 
       {loadError && (
         <div className="sand-card p-4 rounded-xl flex items-center gap-3 border-l-4 border-error">
@@ -197,162 +170,110 @@ export function ReportsContent() {
       )}
 
       {/* ── Header ─────────────────────────────────────────── */}
-      <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">
-            รายงานกำไร-ขาดทุน
-          </h2>
-          <p className="font-body-md text-on-surface-variant">
-            สรุปรายรับ รายจ่าย กำไร และคำแนะนำ
-          </p>
-        </div>
+      <div>
+        <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">
+          รายงานกำไรขาดทุน
+        </h2>
+        <p className="font-body-md text-on-surface-variant">
+          สรุปผลประกอบการประจำเดือน {formatMonthLabel(selectedMonth)}
+          {growthIncome !== 0 && (
+            <span className={`ml-2 font-semibold text-sm ${growthIncome > 0 ? "text-primary" : "text-error"}`}>
+              {growthIncome > 0 ? "+" : ""}{growthIncome.toFixed(1)}% จากเดือนที่แล้ว
+            </span>
+          )}
+        </p>
+      </div>
 
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={exportCSV}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-outline-variant font-body-md text-on-surface-variant hover:bg-surface-container transition-all"
-          >
-            <span className="material-symbols-outlined text-[18px]">download</span>
-            CSV
-          </button>
-
-          <button
-            onClick={exportExcel}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-primary font-body-md text-primary hover:bg-primary-container/20 transition-all"
-          >
-            <span className="material-symbols-outlined text-[18px]">table_view</span>
-            Excel
-          </button>
-        </div>
-      </section>
+      {/* ── Export PDF — full-width hero button ────────────── */}
+      <button
+        onClick={exportPDF}
+        className="btn-primary w-full py-3.5 text-base print:hidden"
+      >
+        <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
+        Export PDF
+      </button>
 
       {/* ── Metric cards ───────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter">
-        {/* รายรับ */}
-        <div className="metric-card p-6 rounded-2xl border border-surface-variant">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-            รายรับรวม
-          </span>
-          <div className="flex items-baseline gap-1.5 text-primary">
-            <span className="text-lg font-bold opacity-70">฿</span>
-            <span className="text-2xl font-bold font-headline-md">
-              {formatMoney(summary.income)}
-            </span>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {/* รายจ่าย */}
-        <div className="metric-card p-6 rounded-2xl border border-surface-variant">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-            รายจ่ายรวม
-          </span>
-          <div className="flex items-baseline gap-1.5 text-error">
-            <span className="text-lg font-bold opacity-70">฿</span>
-            <span className="text-2xl font-bold font-headline-md">
-              {formatMoney(summary.expense)}
+        {/* รายรับรวม */}
+        <div className="metric-card p-7 rounded-2xl">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายรับรวม</span>
+          <div className="flex items-baseline gap-2 text-primary">
+            <span className="text-2xl font-bold opacity-60">฿</span>
+            <span className="font-display-currency text-display-currency tracking-tight leading-none">
+              {formatMoney(income)}
             </span>
           </div>
-        </div>
-
-        {/* กำไร */}
-        <div className="metric-card p-6 rounded-2xl border border-surface-variant">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-            กำไรสุทธิ
-          </span>
-          <div
-            className={`flex items-baseline gap-1.5 ${summary.profit >= 0 ? "text-primary" : "text-error"}`}
-          >
-            <span className="text-lg font-bold opacity-70">฿</span>
-            <span className="text-2xl font-bold font-headline-md">
-              {formatMoney(Math.abs(summary.profit))}
-            </span>
-          </div>
-          {summary.profit < 0 && (
-            <p className="mt-1 font-label-caps text-label-caps text-error">ขาดทุน</p>
+          {growthIncome !== 0 && (
+            <div className={`mt-3 flex items-center gap-1.5 ${growthIncome > 0 ? "text-primary" : "text-error"}`}>
+              <span className="material-symbols-outlined text-[16px]">
+                {growthIncome > 0 ? "trending_up" : "trending_down"}
+              </span>
+              <span className="font-label-caps text-label-caps">
+                {growthIncome > 0 ? "+" : ""}{growthIncome.toFixed(1)}% จากเดือนที่แล้ว
+              </span>
+            </div>
           )}
         </div>
 
-        {/* อัตรากำไร */}
-        <div className="metric-card p-6 rounded-2xl border border-surface-variant">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-            อัตรากำไร
-          </span>
-          <div className="flex items-center gap-3">
-            <span className="text-2xl font-bold font-headline-md text-on-surface">
-              {summary.margin.toFixed(1)}%
+        {/* รายจ่ายรวม */}
+        <div className="metric-card p-7 rounded-2xl">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายจ่ายรวม</span>
+          <div className="flex items-baseline gap-2 text-error">
+            <span className="text-2xl font-bold opacity-60">฿</span>
+            <span className="font-display-currency text-display-currency tracking-tight leading-none">
+              {formatMoney(expense)}
             </span>
-            <div className="h-2 flex-1 bg-surface-container-highest rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all"
-                style={{ width: `${Math.min(Math.max(summary.margin, 0), 100)}%` }}
-              />
-            </div>
           </div>
+        </div>
+
+        {/* กำไรสุทธิ — HERO CARD (dark green) */}
+        <div className={`p-7 rounded-2xl md:col-span-2 ${profit >= 0 ? "card-hero" : "metric-card"}`}>
+          <span className={`font-label-caps text-label-caps block mb-3 ${profit >= 0 ? "text-green-200" : "text-on-surface-variant"}`}>
+            กำไรสุทธิ
+          </span>
+          <div className={`flex items-baseline gap-2 ${profit >= 0 ? "text-white" : "text-error"}`}>
+            <span className="text-2xl font-bold opacity-70">฿</span>
+            <span className="font-display-currency text-display-currency tracking-tight leading-none">
+              {formatMoney(Math.abs(profit))}
+            </span>
+          </div>
+          <div className={`mt-3 flex items-center gap-2 ${profit >= 0 ? "text-green-200" : "text-error"}`}>
+            <span className="material-symbols-outlined text-[16px]">
+              {profit >= 0 ? "check_circle" : "cancel"}
+            </span>
+            <span className="font-label-caps text-label-caps">
+              {profit >= 0 ? `Margin ${margin.toFixed(1)}%` : "ขาดทุน"}
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── วิเคราะห์โครงสร้างต้นทุน ──────────────────────── */}
+      <div className="metric-card p-7 rounded-2xl">
+        <h3 className="font-headline-md text-headline-md text-on-surface mb-5">
+          วิเคราะห์โครงสร้างต้นทุน
+        </h3>
+        <div className="space-y-4">
+          <ProgressRow label="รายรับ" amount={income} total={income} colorClass="bg-primary" />
+          <ProgressRow label="รายจ่าย" amount={expense} total={income} colorClass="bg-error" />
+          <ProgressRow label="กำไรสุทธิ" amount={Math.max(profit, 0)} total={income} colorClass="bg-primary-container" />
         </div>
       </div>
 
-      {/* ── Financial Summary chart ─────────────────────────── */}
-      <section className="metric-card p-8 rounded-2xl border border-surface-variant">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-headline-md text-headline-md text-on-surface">
-            สรุปการเงิน
-          </h3>
-          <div className="flex gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-primary" />
-              <span className="font-label-caps text-label-caps text-on-surface-variant">รายรับ</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-error" />
-              <span className="font-label-caps text-label-caps text-on-surface-variant">รายจ่าย</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress rows */}
-        <div className="space-y-5 mb-8">
-          <ProgressRow
-            label="รายรับ"
-            amount={summary.income}
-            total={summary.income}
-            colorClass="bg-primary"
-          />
-          <ProgressRow
-            label="รายจ่าย"
-            amount={summary.expense}
-            total={summary.income}
-            colorClass="bg-error"
-          />
-          <ProgressRow
-            label="กำไรสุทธิ"
-            amount={Math.max(summary.profit, 0)}
-            total={summary.income}
-            colorClass="bg-primary-container"
-          />
-        </div>
-
-        {/* Chart */}
-        <MonthlySummaryChart income={summary.income} expenses={summary.expense} />
-      </section>
-
       {/* ── AI Summary ─────────────────────────────────────── */}
-      <section className="metric-card p-8 rounded-2xl border border-surface-variant">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="metric-card p-7 rounded-2xl">
+        <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center">
-            <span className="material-symbols-outlined text-on-primary-container text-[20px]">
-              auto_awesome
-            </span>
+            <span className="material-symbols-outlined text-on-primary-container text-[20px]">auto_awesome</span>
           </div>
           <div>
-            <h3 className="font-headline-md text-headline-md text-on-surface">
-              วิเคราะห์อัตโนมัติ
-            </h3>
-            <p className="font-label-caps text-label-caps text-on-surface-variant">
-              Rule-based analysis
-            </p>
+            <h3 className="font-headline-md text-headline-md text-on-surface">วิเคราะห์อัตโนมัติ</h3>
+            <p className="font-label-caps text-label-caps text-on-surface-variant">Rule-based analysis</p>
           </div>
         </div>
-
         <div className="space-y-3">
           {[
             { icon: "trending_up", text: aiSummary.profitText },
@@ -360,70 +281,61 @@ export function ReportsContent() {
             { icon: "receipt_long", text: aiSummary.topExpenseText },
             { icon: "lightbulb", text: aiSummary.advice },
           ].map(({ icon, text }) => (
-            <div
-              key={icon}
-              className="flex items-start gap-3 p-4 bg-surface-container-low rounded-xl"
-            >
-              <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">
-                {icon}
-              </span>
+            <div key={icon} className="flex items-start gap-3 p-4 bg-surface-container-low rounded-xl">
+              <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">{icon}</span>
               <p className="font-body-md text-on-surface">{text}</p>
             </div>
           ))}
         </div>
-      </section>
+      </div>
 
-      {/* ── Expense Breakdown table ─────────────────────────── */}
-      <section className="metric-card rounded-2xl border border-surface-variant overflow-hidden">
-        <div className="p-8 pb-0">
+      {/* ── รายจ่ายแยกตามหมวดหมู่ ──────────────────────────── */}
+      <div className="metric-card rounded-2xl overflow-hidden">
+        <div className="p-7 pb-0 flex items-center justify-between">
           <h3 className="font-headline-md text-headline-md text-on-surface">
             รายจ่ายแยกตามหมวดหมู่
           </h3>
+          <div className="flex gap-2 print:hidden">
+            <button
+              onClick={exportCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container transition-all"
+            >
+              <span className="material-symbols-outlined text-[15px]">download</span>
+              CSV
+            </button>
+            <button
+              onClick={exportExcel}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary font-label-caps text-label-caps text-primary hover:bg-primary-container/20 transition-all"
+            >
+              <span className="material-symbols-outlined text-[15px]">table_view</span>
+              Excel
+            </button>
+          </div>
         </div>
-
-        {expenseByCategory.length === 0 ? (
+        {report.expenseBreakdown.length === 0 ? (
           <p className="px-8 py-10 font-body-md text-on-surface-variant text-center">
-            ยังไม่มีข้อมูลค่าใช้จ่าย
+            ยังไม่มีข้อมูลค่าใช้จ่ายในเดือนนี้
           </p>
         ) : (
           <div className="mt-6 overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-surface-variant text-left">
-                  <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant">
-                    หมวดหมู่
-                  </th>
-                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">
-                    สัดส่วน
-                  </th>
-                  <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">
-                    จำนวนเงิน
-                  </th>
-                  <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">
-                    เปอร์เซ็นต์
-                  </th>
+                  <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant">หมวดหมู่</th>
+                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">สัดส่วน</th>
+                  <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">จำนวนเงิน</th>
+                  <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">%</th>
                 </tr>
               </thead>
-
               <tbody>
-                {expenseByCategory.map(({ category, amount }) => {
-                  const pct =
-                    summary.expense > 0 ? (amount / summary.expense) * 100 : 0;
-
+                {report.expenseBreakdown.map(({ category, amount }) => {
+                  const pct = expense > 0 ? (amount / expense) * 100 : 0;
                   return (
-                    <tr
-                      key={category}
-                      className="border-b border-surface-variant last:border-0 hover:bg-surface-container-low transition-colors"
-                    >
-                      <td className="px-8 py-4 font-body-md text-on-surface">
-                        {category}
-                      </td>
+                    <tr key={category} className="border-b border-surface-variant last:border-0 hover:bg-surface-container-low transition-colors">
+                      <td className="px-8 py-4 font-body-md text-on-surface">{category}</td>
                       <td className="px-6 py-4 min-w-[140px]">
                         <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-error transition-all"
-                            style={{ width: `${pct}%` }}
-                          />
+                          <div className="h-full bg-error transition-all" style={{ width: `${pct}%` }} />
                         </div>
                       </td>
                       <td className="px-8 py-4 text-right font-price-table text-price-table text-error">
@@ -439,12 +351,51 @@ export function ReportsContent() {
             </table>
           </div>
         )}
-      </section>
+      </div>
+
+      {/* ── รายการล่าสุด ────────────────────────────────────── */}
+      <div className="metric-card rounded-2xl overflow-hidden">
+        <div className="p-7 pb-0">
+          <h3 className="font-headline-md text-headline-md text-on-surface">รายการล่าสุด</h3>
+          <p className="font-label-caps text-label-caps text-on-surface-variant mt-1">
+            {formatMonthLabel(selectedMonth)} — 10 รายการล่าสุด
+          </p>
+        </div>
+        {recentTxns.length === 0 ? (
+          <p className="px-7 py-10 font-body-md text-on-surface-variant text-center">
+            ยังไม่มีรายการในเดือนนี้
+          </p>
+        ) : (
+          <div className="mt-5 divide-y divide-surface-container-low">
+            {recentTxns.map((tx) => (
+              <div key={tx.id} className="px-7 py-4 flex items-center gap-4 hover:bg-surface-container-low transition-colors">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  tx.type === "income" ? "bg-primary-container" : "bg-error-container"
+                }`}>
+                  <span className={`material-symbols-outlined text-[18px] ${
+                    tx.type === "income" ? "text-on-primary-container" : "text-on-error-container"
+                  }`}>
+                    {tx.type === "income" ? "arrow_upward" : "arrow_downward"}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-body-md text-on-surface truncate">{tx.description || tx.category}</p>
+                  <p className="font-label-caps text-label-caps text-on-surface-variant">{tx.category} · {tx.date}</p>
+                </div>
+                <div className={`font-price-table text-price-table shrink-0 ${
+                  tx.type === "income" ? "text-primary" : "text-error"
+                }`}>
+                  {tx.type === "income" ? "+" : "-"}฿{formatMoney(tx.amount)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
-
-/* ─── ProgressRow helper ──────────────────────────────────────────────────── */
 
 function ProgressRow({
   label,
@@ -458,7 +409,6 @@ function ProgressRow({
   colorClass: string;
 }) {
   const pct = total > 0 ? Math.min((amount / total) * 100, 100) : 0;
-
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
@@ -468,10 +418,7 @@ function ProgressRow({
         </span>
       </div>
       <div className="h-2 bg-surface-container-highest rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all ${colorClass}`}
-          style={{ width: `${pct}%` }}
-        />
+        <div className={`h-full rounded-full transition-all ${colorClass}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

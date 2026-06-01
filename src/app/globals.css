@@ -139,19 +139,56 @@ body {
 
 .metric-card {
   background-color: #ffffff;
-  box-shadow: 0 20px 40px -20px rgba(43, 43, 43, 0.04);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.05);
 }
 
-.metric-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 24px 48px -20px rgba(43, 43, 43, 0.08);
-  cursor: pointer;
+.card-hero {
+  background-color: #115637;
+  color: #ffffff;
+  box-shadow: 0 4px 20px rgba(17,86,55,0.30);
 }
 
 .sand-card {
   background-color: #efe7d8;
 }
+
+.sand-card-light {
+  background-color: #f5f0e8;
+  border: 1px solid #e0d8cc;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #115637;
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 15px;
+  transition: opacity 0.15s ease;
+}
+
+.btn-primary:hover { opacity: 0.88; }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #f0eee9;
+  color: #115637;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 15px;
+  border: 1.5px solid #bfc9c0;
+  transition: background-color 0.15s ease;
+}
+
+.btn-secondary:hover { background-color: #eae8e3; }
 
 .material-symbols-outlined {
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;

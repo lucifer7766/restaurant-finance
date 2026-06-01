@@ -6,8 +6,9 @@ import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
   { href: "/dashboard", label: "แดชบอร์ด", icon: "dashboard" },
-  { href: "/transactions", label: "รายการ", icon: "receipt_long" },
+  { href: "/transactions", label: "รายรับ / รายจ่าย", icon: "receipt_long" },
   { href: "/reports", label: "รายงานกำไร", icon: "leaderboard" },
+  { href: "/cost-analysis", label: "วิเคราะห์ต้นทุน", icon: "analytics" },
 ];
 
 export function AppSidebar() {
@@ -32,10 +33,10 @@ export function AppSidebar() {
           <span className="material-symbols-outlined">restaurant</span>
         </div>
         <div>
-          <h2 className="font-headline-md text-headline-md font-bold text-primary">
+          <h2 className="font-headline-md text-headline-md font-bold text-primary leading-tight">
             PLU
           </h2>
-          <p className="text-sm text-on-surface-variant">Finance System</p>
+          <p className="font-label-caps text-label-caps text-on-surface-variant">Bistro Management</p>
         </div>
       </div>
 

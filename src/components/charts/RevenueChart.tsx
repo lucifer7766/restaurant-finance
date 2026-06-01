@@ -8,55 +8,72 @@ type RevenueChartProps = {
   data: RevenuePoint[];
 };
 
-const CHART_HEIGHT = 220;
-const CHART_PADDING = { top: 20, right: 10, bottom: 34, left: 50 };
+const CHART_HEIGHT = 200;
+const PAD = { top: 16, right: 12, bottom: 36, left: 52 };
+
+function smoothPath(points: [number, number][]): string {
+  if (points.length < 2) return "";
+  const d: string[] = [`M ${points[0][0].toFixed(2)} ${points[0][1].toFixed(2)}`];
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const cpx = ((prev[0] + curr[0]) / 2).toFixed(2);
+    d.push(`C ${cpx} ${prev[1].toFixed(2)}, ${cpx} ${curr[1].toFixed(2)}, ${curr[0].toFixed(2)} ${curr[1].toFixed(2)}`);
+  }
+  return d.join(" ");
+}
 
 export function RevenueChart({ data }: RevenueChartProps) {
-  const { bars, maxValue, yTicks } = useMemo(() => {
+  const { maxValue, yTicks, innerW, innerH, baseY } = useMemo(() => {
     const max = Math.max(...data.flatMap((d) => [d.revenue, d.expenses]), 0);
-    const paddedMax = max === 0 ? 1000 : Math.ceil(max / 10000) * 10000;
+    const paddedMax = max === 0 ? 10000 : Math.ceil(max / 10000) * 10000;
     const ticks = Array.from({ length: 5 }, (_, i) => (paddedMax / 4) * i);
-
-    return { bars: data, maxValue: paddedMax, yTicks: ticks };
+    const w = 100 - PAD.left - PAD.right;
+    const h = CHART_HEIGHT - PAD.top - PAD.bottom;
+    return { maxValue: paddedMax, yTicks: ticks, innerW: w, innerH: h, baseY: PAD.top + h };
   }, [data]);
 
-  const innerWidth = 100 - CHART_PADDING.left - CHART_PADDING.right;
-  const innerHeight = CHART_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom;
-  const groupWidth = innerWidth / Math.max(data.length, 1);
-  const barWidth = Math.min(groupWidth * 0.28, 2.8);
-  const gap = Math.min(groupWidth * 0.12, 1.2);
-  const baseY = CHART_PADDING.top + innerHeight;
+  const getX = (i: number) =>
+    PAD.left + (data.length <= 1 ? innerW / 2 : (innerW / (data.length - 1)) * i);
+
+  const getY = (value: number) =>
+    PAD.top + innerH - (value / maxValue) * innerH;
+
+  const revPoints: [number, number][] = data.map((d, i) => [getX(i), getY(d.revenue)]);
+  const expPoints: [number, number][] = data.map((d, i) => [getX(i), getY(d.expenses)]);
+
+  const revPath = smoothPath(revPoints);
+  const expPath = smoothPath(expPoints);
+
+  const revAreaPath = revPath
+    ? `${revPath} L ${revPoints[revPoints.length - 1][0].toFixed(2)} ${baseY.toFixed(2)} L ${PAD.left.toFixed(2)} ${baseY.toFixed(2)} Z`
+    : "";
 
   return (
     <div className="w-full">
-      <div className="h-[280px] w-full overflow-hidden">
+      <div style={{ height: `${CHART_HEIGHT + 8}px` }} className="w-full overflow-hidden">
         <svg
           viewBox={`0 0 100 ${CHART_HEIGHT}`}
           className="h-full w-full"
           role="img"
-          aria-label="Monthly revenue and expenses chart"
+          aria-label="รายรับและรายจ่าย 12 เดือน"
           preserveAspectRatio="xMidYMid meet"
         >
+          {/* Horizontal grid lines */}
           {yTicks.map((tick) => {
-            const y = CHART_PADDING.top + innerHeight - (tick / maxValue) * innerHeight;
-
+            const y = getY(tick);
             return (
               <g key={tick}>
                 <line
-                  x1={CHART_PADDING.left}
-                  y1={y}
-                  x2={100 - CHART_PADDING.right}
-                  y2={y}
-                  stroke="currentColor"
-                  strokeOpacity={0.08}
+                  x1={PAD.left} y1={y}
+                  x2={100 - PAD.right} y2={y}
+                  stroke="currentColor" strokeOpacity={0.07}
                   vectorEffect="non-scaling-stroke"
                 />
                 <text
-                  x={CHART_PADDING.left - 3}
-                  y={y + 1}
-                  textAnchor="end"
-                  dominantBaseline="middle"
-                  className="fill-zinc-400 text-[3px] font-medium"
+                  x={PAD.left - 3} y={y + 0.8}
+                  textAnchor="end" dominantBaseline="middle"
+                  className="fill-zinc-400" style={{ fontSize: "3px" }}
                 >
                   {formatCompactNumber(tick)}
                 </text>
@@ -64,63 +81,64 @@ export function RevenueChart({ data }: RevenueChartProps) {
             );
           })}
 
-          {bars.map((point, index) => {
-            const groupX = CHART_PADDING.left + index * groupWidth + groupWidth / 2;
-            const revenueHeight = Math.max(
-              (point.revenue / maxValue) * innerHeight,
-              point.revenue > 0 ? 2 : 0
-            );
-            const expenseHeight = Math.max(
-              (point.expenses / maxValue) * innerHeight,
-              point.expenses > 0 ? 2 : 0
-            );
+          {/* Area fill under revenue line */}
+          {revAreaPath && (
+            <path d={revAreaPath} fill="#115637" fillOpacity={0.06} />
+          )}
 
+          {/* Revenue line */}
+          {revPath && (
+            <path
+              d={revPath} fill="none"
+              stroke="#115637" strokeWidth="1.2"
+              strokeLinecap="round" strokeLinejoin="round"
+            />
+          )}
+
+          {/* Expense line */}
+          {expPath && (
+            <path
+              d={expPath} fill="none"
+              stroke="#ba1a1a" strokeWidth="1.2"
+              strokeLinecap="round" strokeLinejoin="round"
+            />
+          )}
+
+          {/* Data points + x-axis labels */}
+          {data.map((point, i) => {
+            const x = getX(i);
             return (
               <g key={point.month}>
-                <rect
-                  x={groupX - barWidth - gap / 2}
-                  y={baseY - revenueHeight}
-                  width={barWidth}
-                  height={revenueHeight}
-                  rx={0.7}
-                  className="fill-emerald-500"
-                >
-                  <title>{`${point.month} revenue: ${formatBaht(point.revenue)}`}</title>
-                </rect>
-
-                <rect
-                  x={groupX + gap / 2}
-                  y={baseY - expenseHeight}
-                  width={barWidth}
-                  height={expenseHeight}
-                  rx={0.7}
-                  className="fill-red-400"
-                >
-                  <title>{`${point.month} expenses: ${formatBaht(point.expenses)}`}</title>
-                </rect>
-
-                <text
-                  x={groupX}
-                  y={baseY + 10}
-                  textAnchor="middle"
-                  className="fill-zinc-500 text-[2.6px] font-medium"
-                >
-                  {point.month}
-                </text>
+                <circle cx={x} cy={getY(point.revenue)} r="0.9" fill="#115637">
+                  <title>{`${point.month} รายรับ: ${formatBaht(point.revenue)}`}</title>
+                </circle>
+                <circle cx={x} cy={getY(point.expenses)} r="0.9" fill="#ba1a1a">
+                  <title>{`${point.month} รายจ่าย: ${formatBaht(point.expenses)}`}</title>
+                </circle>
+                {/* Show every other month label to avoid crowding */}
+                {i % 2 === 0 && (
+                  <text
+                    x={x} y={baseY + 9}
+                    textAnchor="middle"
+                    className="fill-zinc-400" style={{ fontSize: "2.8px" }}
+                  >
+                    {point.month}
+                  </text>
+                )}
               </g>
             );
           })}
         </svg>
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-6 text-sm">
+      <div className="mt-3 flex items-center justify-center gap-6">
         <div className="flex items-center gap-2">
-          <span className="h-3 w-3 rounded-sm bg-emerald-500" />
-          <span className="text-zinc-600 dark:text-zinc-400">Revenue</span>
+          <div className="w-8 h-0.5 rounded-full bg-primary" />
+          <span className="font-label-caps text-label-caps text-on-surface-variant">รายรับ</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-3 w-3 rounded-sm bg-red-400" />
-          <span className="text-zinc-600 dark:text-zinc-400">Expenses</span>
+          <div className="w-8 h-0.5 rounded-full bg-error" />
+          <span className="font-label-caps text-label-caps text-on-surface-variant">รายจ่าย</span>
         </div>
       </div>
     </div>
