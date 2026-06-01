@@ -20,6 +20,21 @@ const PAYMENT_METHODS = [
   { key: "บัตรเครดิต", icon: "credit_card", color: "bg-tertiary-container", iconColor: "text-on-tertiary-fixed-variant" },
 ];
 
+const PAYMENT_KEYWORDS: { label: string; keywords: string[] }[] = [
+  { label: "เงินสด", keywords: ["เงินสด", "cash"] },
+  { label: "โอนเงิน", keywords: ["โอนเงิน", "transfer", "prompt pay", "promptpay"] },
+  { label: "บัตรเครดิต", keywords: ["บัตรเครดิต", "card", "credit"] },
+];
+
+function detectPaymentChannel(note: string | undefined): string {
+  if (!note) return "ไม่ระบุ";
+  const lower = note.toLowerCase();
+  for (const { label, keywords } of PAYMENT_KEYWORDS) {
+    if (keywords.some((k) => lower.includes(k))) return label;
+  }
+  return "ไม่ระบุ";
+}
+
 const INCOME_CATEGORIES = [
   { key: "ยอดขายอาหาร", label: "ยอดขายอาหาร", sublabel: "DINE-IN & TAKEAWAY", icon: "restaurant" },
   { key: "ยอดขายเครื่องดื่ม", label: "ยอดขายเครื่องดื่ม", sublabel: "SOFT DRINKS & BAR", icon: "local_bar" },
@@ -241,8 +256,10 @@ export function IncomeContent() {
                       <span className="font-body-md text-on-surface text-sm truncate">{getCategoryLabel(tx.category)}</span>
                     </div>
                     <div className="text-right">
-                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container">
-                        <span className="font-label-caps text-label-caps text-on-primary-container">โอนเงิน</span>
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container">
+                        <span className="font-label-caps text-label-caps text-on-surface-variant">
+                          {detectPaymentChannel(tx.description)}
+                        </span>
                       </div>
                     </div>
                   </div>

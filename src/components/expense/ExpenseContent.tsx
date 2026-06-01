@@ -119,8 +119,8 @@ export function ExpenseContent() {
                     <span className="font-body-md text-on-surface">{getCategoryLabel(category)}</span>
                   </div>
                   {isTop && (
-                    <span className="font-label-caps text-label-caps text-primary bg-primary-container px-2 py-0.5 rounded-full">
-                      +12% จากเดือนก่อน
+                    <span className="font-label-caps text-label-caps text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
+                      ข้อมูลเดือนนี้
                     </span>
                   )}
                 </div>
@@ -164,26 +164,30 @@ export function ExpenseContent() {
           <p className="px-6 py-10 text-center font-body-md text-on-surface-variant">ไม่มีรายจ่ายใน{monthLabel}</p>
         ) : (
           <>
-            <div className="px-4 py-2 grid grid-cols-3 border-b border-surface-container-low">
+            <div className="px-4 py-2 grid grid-cols-4 border-b border-surface-container-low">
               <span className="font-label-caps text-label-caps text-on-surface-variant">วันที่</span>
               <span className="font-label-caps text-label-caps text-on-surface-variant">รายการ</span>
-              <span className="font-label-caps text-label-caps text-on-surface-variant text-right">หมวดหมู่</span>
+              <span className="font-label-caps text-label-caps text-on-surface-variant">หมวดหมู่</span>
+              <span className="font-label-caps text-label-caps text-on-surface-variant text-right">จำนวนเงิน</span>
             </div>
             <div className="divide-y divide-surface-container-low">
               {monthExpenses.slice(0, 10).map((tx) => {
                 const style = getCategoryStyle(tx.category || "");
                 return (
-                  <div key={tx.id} className="px-4 py-4 grid grid-cols-3 items-center hover:bg-surface-container-low transition-colors">
+                  <div key={tx.id} className="px-4 py-4 grid grid-cols-4 items-center hover:bg-surface-container-low transition-colors">
                     <div>
                       <p className="font-label-caps text-label-caps text-on-surface">{formatTransactionDate(tx.date)}</p>
                     </div>
                     <div>
                       <p className="font-body-md text-on-surface text-sm truncate">{tx.description || getCategoryLabel(tx.category)}</p>
                     </div>
-                    <div className="text-right">
+                    <div>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-label-caps text-label-caps ${style.bg} ${style.color}`}>
                         {getCategoryLabel(tx.category)}
                       </span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-price-table text-price-table text-error">฿{tx.amount.toLocaleString("th-TH")}</p>
                     </div>
                   </div>
                 );
