@@ -308,44 +308,43 @@ export function IncomeContent() {
               {pagedIncome.map((tx) => {
                 const meta = getIncomeMeta(tx.category || "");
                 return (
-                  <div key={tx.id} className="px-4 py-4 grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-2 items-center hover:bg-surface-container-low transition-colors">
-                    <div className="min-w-[52px]">
-                      <p className="font-label-caps text-label-caps text-on-surface leading-tight">
-                        {formatTransactionDate(tx.date)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
-                        <span className={`material-symbols-outlined text-[14px] ${meta.iconColor}`}>{meta.icon}</span>
+                  <div key={tx.id} className="overflow-x-auto scrollbar-none hover:bg-surface-container-low transition-colors">
+                    <div className="flex items-center min-w-max">
+                      <div className="grid grid-cols-[52px_1fr_auto] gap-x-3 items-center px-4 py-4 w-[calc(100vw-2rem)] max-w-lg">
+                        <p className="font-label-caps text-label-caps text-on-surface leading-tight">
+                          {formatTransactionDate(tx.date)}
+                        </p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
+                            <span className={`material-symbols-outlined text-[14px] ${meta.iconColor}`}>{meta.icon}</span>
+                          </div>
+                          <span className="font-body-md text-on-surface text-sm leading-tight truncate">
+                            {tx.description || getCategoryLabel(tx.category)}
+                          </span>
+                        </div>
+                        <p className="font-semibold text-sm text-primary whitespace-nowrap text-right">
+                          +{formatBaht(tx.amount)}
+                        </p>
                       </div>
-                      <span className="font-body-md text-on-surface text-sm leading-tight truncate">
-                        {tx.description || getCategoryLabel(tx.category)}
-                      </span>
+                      <div className="flex items-center gap-1 px-3 border-l border-surface-container-low shrink-0">
+                        <button
+                          onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
+                          className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">edit</span>
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm("ลบรายการนี้?")) return;
+                            try { await deleteTransaction(tx.id); }
+                            catch (e) { alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ"); }
+                          }}
+                          className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-semibold text-sm text-primary whitespace-nowrap">
-                        +{formatBaht(tx.amount)}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
-                      className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">edit</span>
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (!window.confirm("ลบรายการนี้?")) return;
-                        try {
-                          await deleteTransaction(tx.id);
-                        } catch (e) {
-                          alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
-                        }
-                      }}
-                      className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
-                    </button>
                   </div>
                 );
               })}
