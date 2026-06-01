@@ -188,7 +188,7 @@ export function ExpenseNewForm() {
             }`}>
               <input
                 type="file"
-                accept=".jpg,.jpeg,.png,.webp,.pdf,.csv,.xlsx"
+                accept="image/*,.pdf,.csv,.xlsx"
                 className="hidden"
                 onChange={(e) => setAttachedFile(e.target.files?.[0] ?? null)}
               />
