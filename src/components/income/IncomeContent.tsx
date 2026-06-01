@@ -36,11 +36,19 @@ function detectPaymentChannel(note: string | undefined): string {
 }
 
 const INCOME_CATEGORIES = [
-  { key: "ยอดขายอาหาร",    sublabel: "DINE-IN & TAKEAWAY",      icon: "restaurant" },
-  { key: "ยอดขายเครื่องดื่ม", sublabel: "SOFT DRINKS & BAR",       icon: "local_bar" },
-  { key: "เดลิเวอรี",       sublabel: "GRAB, LINEMAN, SHOPEE",   icon: "delivery_dining" },
-  { key: "จัดเลี้ยง",       sublabel: "CATERING",                icon: "event" },
+  { key: "ยอดขายอาหาร",      sublabel: "DINE-IN & TAKEAWAY",    icon: "restaurant",      bg: "bg-surface-container-high", iconColor: "text-on-surface-variant" },
+  { key: "ยอดขายเครื่องดื่ม", sublabel: "SOFT DRINKS & BAR",     icon: "local_bar",       bg: "bg-error-container",        iconColor: "text-error" },
+  { key: "เดลิเวอรี",         sublabel: "GRAB, LINEMAN, SHOPEE", icon: "delivery_dining", bg: "bg-surface-container-high", iconColor: "text-on-surface-variant" },
+  { key: "จัดเลี้ยง",         sublabel: "CATERING",              icon: "event",           bg: "bg-primary-container",      iconColor: "text-on-primary-container" },
 ];
+
+function getCategoryIcon(category: string): string {
+  if (category.includes("อาหาร"))       return "restaurant";
+  if (category.includes("เครื่องดื่ม")) return "local_bar";
+  if (category.includes("เดลิเวอรี"))   return "delivery_dining";
+  if (category.includes("จัดเลี้ยง"))   return "event";
+  return "sell";
+}
 
 export function IncomeContent() {
   const { transactions, isLoading, error } = useTransactions();
@@ -195,10 +203,12 @@ export function IncomeContent() {
             const ref = INCOME_CATEGORIES.find((c) => category.includes(c.key) || c.key.includes(category));
             const icon = ref?.icon ?? "sell";
             const sublabel = ref?.sublabel ?? "";
+            const bg = ref?.bg ?? "bg-surface-container-high";
+            const iconColor = ref?.iconColor ?? "text-on-surface-variant";
             return (
               <div key={category} className="metric-card p-5 rounded-2xl flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-on-surface-variant text-[20px]">{icon}</span>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
+                  <span className={`material-symbols-outlined text-[20px] ${iconColor}`}>{icon}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-body-md text-on-surface">{getCategoryLabel(category)}</p>
@@ -207,7 +217,7 @@ export function IncomeContent() {
                   )}
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="font-price-table text-price-table text-on-surface">{formatBaht(amount)}</p>
+                  <p className="font-price-table text-price-table text-primary">{formatBaht(amount)}</p>
                 </div>
               </div>
             );
@@ -233,30 +243,39 @@ export function IncomeContent() {
                 <span className="font-label-caps text-label-caps text-on-surface-variant text-right">จำนวน</span>
               </div>
               <div className="divide-y divide-surface-container-low">
-                {monthIncome.slice(0, 10).map((tx) => (
-                  <div key={tx.id} className="px-6 py-4 grid grid-cols-3 items-center hover:bg-surface-container-low transition-colors">
-                    <div>
-                      <p className="font-label-caps text-label-caps text-on-surface-variant leading-tight">
-                        {formatTransactionDate(tx.date)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-surface-container-high flex items-center justify-center shrink-0">
-                        <span className="material-symbols-outlined text-on-surface-variant text-[14px]">restaurant</span>
+                {monthIncome.slice(0, 10).map((tx) => {
+                  const txIcon = getCategoryIcon(tx.category);
+                  const channel = detectPaymentChannel(tx.description);
+                  const channelIcon =
+                    channel === "เงินสด"     ? "payments" :
+                    channel === "โอนเงิน"    ? "account_balance" :
+                    channel === "บัตรเครดิต" ? "credit_card" : "help_outline";
+                  return (
+                    <div key={tx.id} className="px-6 py-4 grid grid-cols-3 items-center hover:bg-surface-container-low transition-colors">
+                      <div>
+                        <p className="font-label-caps text-label-caps text-on-surface-variant leading-tight">
+                          {formatTransactionDate(tx.date)}
+                        </p>
                       </div>
-                      <span className="font-body-md text-on-surface text-sm truncate">
-                        {getCategoryLabel(tx.category)}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container">
-                        <span className="font-label-caps text-label-caps text-on-surface-variant">
-                          {detectPaymentChannel(tx.description)}
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-surface-container-high flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-on-surface-variant text-[14px]">{txIcon}</span>
+                        </div>
+                        <span className="font-body-md text-on-surface text-sm truncate">
+                          {getCategoryLabel(tx.category)}
                         </span>
-                      </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container">
+                          <span className="material-symbols-outlined text-on-surface-variant text-[12px]">{channelIcon}</span>
+                          <span className="font-label-caps text-label-caps text-on-surface-variant">
+                            {channel}
+                          </span>
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             <div className="p-5 border-t border-surface-container-low">

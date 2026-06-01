@@ -24,13 +24,13 @@ function getCategoryMeta(category: string) {
     : { icon: "receipt_long", iconColor: "text-on-surface-variant", bg: "bg-surface-container-high" };
 }
 
-function getBadgeMeta(category: string): { text: string; textColor: string; bgColor: string } {
-  if (category.includes("วัตถุดิบ")) return { text: "+12% vs last month", textColor: "text-error",   bgColor: "" };
-  if (category.includes("ค่าแรง"))   return { text: "Stable",             textColor: "text-on-surface-variant", bgColor: "" };
-  if (category.includes("ค่าเช่า"))  return { text: "Fixed",              textColor: "text-on-surface-variant", bgColor: "" };
-  if (category.includes("ไฟฟ้า"))    return { text: "-5% energy saving",  textColor: "text-primary", bgColor: "" };
-  if (category.includes("การตลาด"))  return { text: "Variable",           textColor: "text-on-surface-variant", bgColor: "" };
-  return { text: "เดือนนี้", textColor: "text-on-surface-variant", bgColor: "" };
+function getBadgeMeta(category: string): { text: string; textColor: string } {
+  if (category.includes("วัตถุดิบ")) return { text: "+12% vs last month", textColor: "text-on-surface-variant" };
+  if (category.includes("ค่าแรง"))   return { text: "Stable",             textColor: "text-on-surface-variant" };
+  if (category.includes("ค่าเช่า"))  return { text: "Fixed",              textColor: "text-on-surface-variant" };
+  if (category.includes("ไฟฟ้า"))    return { text: "-5% energy saving",  textColor: "text-primary" };
+  if (category.includes("การตลาด"))  return { text: "Variable",           textColor: "text-on-surface-variant" };
+  return { text: "เดือนนี้",          textColor: "text-on-surface-variant" };
 }
 
 const PAGE_SIZE = 10;
@@ -202,17 +202,18 @@ export function ExpenseContent() {
           <p className="px-6 py-10 text-center font-body-md text-on-surface-variant">ไม่มีรายจ่ายใน{monthLabel}</p>
         ) : (
           <>
-            <div className="px-4 py-2 grid grid-cols-3 border-b border-surface-container-low">
+            <div className="px-4 py-2 grid grid-cols-[auto_1fr_auto_auto] gap-x-3 border-b border-surface-container-low">
               <span className="font-label-caps text-label-caps text-on-surface-variant">วันที่</span>
               <span className="font-label-caps text-label-caps text-on-surface-variant">รายการ</span>
-              <span className="font-label-caps text-label-caps text-on-surface-variant text-right">หมวดหมู่</span>
+              <span className="font-label-caps text-label-caps text-on-surface-variant">หมวดหมู่</span>
+              <span className="font-label-caps text-label-caps text-on-surface-variant text-right">จำนวน</span>
             </div>
             <div className="divide-y divide-surface-container-low">
               {pagedExpenses.map((tx) => {
                 const meta = getCategoryMeta(tx.category || "");
                 return (
-                  <div key={tx.id} className="px-4 py-4 grid grid-cols-3 items-start gap-2 hover:bg-surface-container-low transition-colors">
-                    <div>
+                  <div key={tx.id} className="px-4 py-4 grid grid-cols-[auto_1fr_auto_auto] gap-x-3 items-start hover:bg-surface-container-low transition-colors">
+                    <div className="min-w-[52px]">
                       <p className="font-label-caps text-label-caps text-on-surface leading-tight">
                         {formatTransactionDate(tx.date)}
                       </p>
@@ -222,10 +223,15 @@ export function ExpenseContent() {
                         {tx.description || getCategoryLabel(tx.category)}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-label-caps text-label-caps ${meta.bg} ${meta.iconColor}`}>
                         {getCategoryLabel(tx.category)}
                       </span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-price-table text-price-table text-error whitespace-nowrap">
+                        ฿{tx.amount.toLocaleString("th-TH")}
+                      </p>
                     </div>
                   </div>
                 );
