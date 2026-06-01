@@ -371,7 +371,7 @@ export function ExpenseContent() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onConfirm={async (data) => {
-          console.log("[parent] onConfirm received:", data);
+          console.log("[OCR_CONFIRM_DATA]", data);
           try {
             await addTransaction({
               date: data.date,
@@ -380,12 +380,11 @@ export function ExpenseContent() {
               amount: data.amount,
               note: data.note || "",
             } as Parameters<typeof addTransaction>[0]);
-            console.log("[parent] addTransaction success");
+            console.log("[OCR_ADD_SUCCESS]", data);
+            setModalOpen(false);
           } catch (e) {
             console.error("[OCR_CONFIRM_ERROR_FULL]", e);
             alert(e instanceof Error ? e.message : JSON.stringify(e));
-          } finally {
-            setModalOpen(false);
           }
         }}
         initialData={scanResult}
