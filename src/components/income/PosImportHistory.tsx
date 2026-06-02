@@ -101,8 +101,6 @@ export function EditBatchModal({
       const note = `${batchId} | ${r.category.trim()} | ${countPart} | ${payStr}`;
       return { id: r.id, date: r.date, category: r.category.trim(), amount: Number(r.amount), note };
     });
-    console.log("[POS Edit] selectedBatch", batch);
-    console.log("[POS Edit] payload", updates);
     setSaving(true);
     try {
       await onSave(updates, newPay);
@@ -306,7 +304,7 @@ export function PosImportHistory({ batches, onDelete, onEdit, editingBatch, dele
                 <span className="material-symbols-outlined text-[18px]">edit</span>
               </button>
               <button
-                onClick={() => { console.log("[POS Delete] delete button clicked", batch); setDeletingBatch(batch); }}
+                onClick={() => setDeletingBatch(batch)}
                 className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
               >
                 <span className="material-symbols-outlined text-[18px]">delete</span>

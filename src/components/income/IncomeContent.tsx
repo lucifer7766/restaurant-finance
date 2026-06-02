@@ -535,10 +535,8 @@ export function IncomeContent() {
           batch={editingBatch}
           onClose={() => setEditingBatch(null)}
           onSave={async (updates, _pay) => {
-            console.log("[POS Edit] saving updates", updates);
             for (const u of updates) {
               const payload = { date: u.date, category: u.category, amount: u.amount, note: u.note };
-              console.log("[POS Edit] payload", payload);
               await updateTransaction(u.id, payload);
             }
             await refreshTransactions();
@@ -553,30 +551,16 @@ export function IncomeContent() {
           batch={deletingBatch}
           onClose={() => setDeletingBatch(null)}
           onConfirm={async () => {
-            console.log("[POS Delete] confirm clicked", deletingBatch.batchId);
             const ids = deletingBatch.transactions.map((t) => t.id);
-            console.log("[POS Delete] ids:", ids);
             if (ids.length === 0) throw new Error("ไม่พบรายการรายรับของ import นี้");
             const supabase = getSupabaseClient();
             for (const id of ids) {
-              try {
-                console.log("[POS Delete] deleting", id);
-                await deleteTransactionFromSupabase(id);
-                console.log("[POS Delete] deleted", id);
-                // verify
-                const { data: still } = await supabase
-                  .from("transactions").select("id").eq("id", id).maybeSingle();
-                console.log("[POS Delete] verify result", still);
-                if (still) throw new Error(`ลบไม่สำเร็จ: record ${id} ยังอยู่ใน database (อาจติด RLS)`);
-              } catch (e) {
-                console.error("[POS Delete] error", id, e);
-                throw e;
-              }
+              await deleteTransactionFromSupabase(id);
+              const { data: still } = await supabase
+                .from("transactions").select("id").eq("id", id).maybeSingle();
+              if (still) throw new Error(`ลบไม่สำเร็จ: record ${id} ยังอยู่ใน database (อาจติด RLS)`);
             }
-            console.log("[POS Delete] done");
-            console.log("[POS Delete] refreshTransactions called");
             await refreshTransactions();
-            console.log("[POS Delete] transactions after refresh", transactions.length);
             setDeletingBatch(null);
             setHistoryOpen(false);
           }}

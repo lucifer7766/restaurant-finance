@@ -133,12 +133,13 @@ export async function updateTransaction(
 export async function deleteTransaction(id: string): Promise<void> {
   const supabase = getSupabaseClient();
 
-  const { error } = await supabase
+  const result = await supabase
     .from("transactions")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .select("*");
 
-  if (error) {
-    throw new Error(formatSupabaseError(error));
+  if (result.error) {
+    throw new Error(formatSupabaseError(result.error));
   }
 }
