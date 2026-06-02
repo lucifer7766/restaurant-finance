@@ -13,15 +13,15 @@ type SeedRow = {
 
 const DEMO_DATA: SeedRow[] = [
   // ── 2026-06 รายรับ ──────────────────────────────────────────
-  { date: "2026-06-01", type: "income", category: "ยอดขายอาหาร",       amount: 150000, note: "เงินสด (Cash) — บริการวันหยุดสุดสัปดาห์" },
-  { date: "2026-06-05", type: "income", category: "ยอดขายอาหาร",       amount: 100000, note: "โอนเงิน (Transfer) — บริการโต๊ะสัปดาห์แรก" },
-  { date: "2026-06-10", type: "income", category: "ยอดขายอาหาร",       amount: 150000, note: "โอนเงิน (Transfer) — บริการโต๊ะสัปดาห์ที่ 2" },
-  { date: "2026-06-15", type: "income", category: "ยอดขายอาหาร",       amount: 90000,  note: "บัตรเครดิต (Card) — ลูกค้า Corporate" },
-  { date: "2026-06-20", type: "income", category: "ยอดขายอาหาร",       amount: 50000,  note: "โอนเงิน (Transfer) — บริการโต๊ะสัปดาห์ที่ 3" },
-  { date: "2026-06-05", type: "income", category: "ยอดขายเครื่องดื่ม", amount: 80000,  note: "บัตรเครดิต (Card) — บาร์ประจำสัปดาห์" },
-  { date: "2026-06-18", type: "income", category: "ยอดขายเครื่องดื่ม", amount: 100000, note: "บัตรเครดิต (Card) — Cocktail Evening" },
-  { date: "2026-06-08", type: "income", category: "เดลิเวอรี",          amount: 60000,  note: "โอนเงิน (Transfer) — Grab/Lineman" },
-  { date: "2026-06-22", type: "income", category: "เดลิเวอรี",          amount: 40000,  note: "โอนเงิน (Transfer) — Shopee Food" },
+  { date: "2026-06-01", type: "income", category: "ยอดขายอาหาร",       amount: 150000, note: "เงินสด — บริการวันหยุดสุดสัปดาห์" },
+  { date: "2026-06-05", type: "income", category: "ยอดขายอาหาร",       amount: 100000, note: "โอนเงิน — บริการโต๊ะสัปดาห์แรก" },
+  { date: "2026-06-10", type: "income", category: "ยอดขายอาหาร",       amount: 150000, note: "โอนเงิน — บริการโต๊ะสัปดาห์ที่ 2" },
+  { date: "2026-06-15", type: "income", category: "ยอดขายอาหาร",       amount: 90000,  note: "บัตรเครดิต — ลูกค้าองค์กร" },
+  { date: "2026-06-20", type: "income", category: "ยอดขายอาหาร",       amount: 50000,  note: "โอนเงิน — บริการโต๊ะสัปดาห์ที่ 3" },
+  { date: "2026-06-05", type: "income", category: "ยอดขายเครื่องดื่ม", amount: 80000,  note: "บัตรเครดิต — บาร์ประจำสัปดาห์" },
+  { date: "2026-06-18", type: "income", category: "ยอดขายเครื่องดื่ม", amount: 100000, note: "บัตรเครดิต — งานค็อกเทล" },
+  { date: "2026-06-08", type: "income", category: "เดลิเวอรี",          amount: 60000,  note: "โอนเงิน — Grab/Lineman" },
+  { date: "2026-06-22", type: "income", category: "เดลิเวอรี",          amount: 40000,  note: "โอนเงิน — Shopee Food" },
 
   // ── 2026-06 รายจ่าย ─────────────────────────────────────────
   { date: "2026-06-02", type: "expense", category: "วัตถุดิบ",     amount: 95000,  note: "เนื้อวากิว A5 – ล็อตนำเข้า" },
@@ -32,16 +32,16 @@ const DEMO_DATA: SeedRow[] = [
   { date: "2026-06-01", type: "expense", category: "ค่าเช่า",      amount: 55000,  note: "ค่าเช่าร้านประจำเดือนมิถุนายน" },
   { date: "2026-06-20", type: "expense", category: "ค่าน้ำค่าไฟ", amount: 32000,  note: "ค่าไฟฟ้าสาขา 1" },
   { date: "2026-06-12", type: "expense", category: "การตลาด",      amount: 50000,  note: "ยิงโฆษณา Facebook/IG" },
-  { date: "2026-06-15", type: "expense", category: "บรรจุภัณฑ์",  amount: 43000,  note: "บรรจุภัณฑ์สำหรับ Delivery" },
+  { date: "2026-06-15", type: "expense", category: "บรรจุภัณฑ์",  amount: 43000,  note: "บรรจุภัณฑ์สำหรับการจัดส่ง" },
 
   // ── 2026-05 ──────────────────────────────────────────────────
-  { date: "2026-05-03", type: "income",  category: "ยอดขายอาหาร",       amount: 140000, note: "เงินสด (Cash) — บริการสัปดาห์แรก" },
-  { date: "2026-05-10", type: "income",  category: "ยอดขายอาหาร",       amount: 200000, note: "โอนเงิน (Transfer) — บริการโต๊ะ" },
-  { date: "2026-05-17", type: "income",  category: "ยอดขายอาหาร",       amount: 110000, note: "โอนเงิน (Transfer) — บริการโต๊ะ" },
-  { date: "2026-05-08", type: "income",  category: "ยอดขายเครื่องดื่ม", amount: 80000,  note: "บัตรเครดิต (Card) — บาร์" },
-  { date: "2026-05-20", type: "income",  category: "ยอดขายเครื่องดื่ม", amount: 100000, note: "บัตรเครดิต (Card) — Happy Hour" },
-  { date: "2026-05-12", type: "income",  category: "เดลิเวอรี",          amount: 55000,  note: "โอนเงิน (Transfer) — Grab/Lineman" },
-  { date: "2026-05-24", type: "income",  category: "เดลิเวอรี",          amount: 44000,  note: "โอนเงิน (Transfer) — Shopee Food" },
+  { date: "2026-05-03", type: "income",  category: "ยอดขายอาหาร",       amount: 140000, note: "เงินสด — บริการสัปดาห์แรก" },
+  { date: "2026-05-10", type: "income",  category: "ยอดขายอาหาร",       amount: 200000, note: "โอนเงิน — บริการโต๊ะ" },
+  { date: "2026-05-17", type: "income",  category: "ยอดขายอาหาร",       amount: 110000, note: "โอนเงิน — บริการโต๊ะ" },
+  { date: "2026-05-08", type: "income",  category: "ยอดขายเครื่องดื่ม", amount: 80000,  note: "บัตรเครดิต — บาร์" },
+  { date: "2026-05-20", type: "income",  category: "ยอดขายเครื่องดื่ม", amount: 100000, note: "บัตรเครดิต — Happy Hour" },
+  { date: "2026-05-12", type: "income",  category: "เดลิเวอรี",          amount: 55000,  note: "โอนเงิน — Grab/Lineman" },
+  { date: "2026-05-24", type: "income",  category: "เดลิเวอรี",          amount: 44000,  note: "โอนเงิน — Shopee Food" },
   { date: "2026-05-02", type: "expense", category: "วัตถุดิบ",     amount: 90000,  note: "วัตถุดิบสัปดาห์แรก" },
   { date: "2026-05-09", type: "expense", category: "วัตถุดิบ",     amount: 75000,  note: "วัตถุดิบสัปดาห์ที่ 2" },
   { date: "2026-05-16", type: "expense", category: "วัตถุดิบ",     amount: 60000,  note: "วัตถุดิบสัปดาห์ที่ 3" },
@@ -53,8 +53,8 @@ const DEMO_DATA: SeedRow[] = [
 
   // ── 2026-04 ──────────────────────────────────────────────────
   { date: "2026-04-05", type: "income",  category: "ยอดขายอาหาร",       amount: 380000, note: "รายรับอาหารประจำเดือน" },
-  { date: "2026-04-10", type: "income",  category: "ยอดขายเครื่องดื่ม", amount: 175000, note: "บัตรเครดิต (Card) — บาร์" },
-  { date: "2026-04-15", type: "income",  category: "เดลิเวอรี",          amount: 140000, note: "โอนเงิน (Transfer) — Delivery" },
+  { date: "2026-04-10", type: "income",  category: "ยอดขายเครื่องดื่ม", amount: 175000, note: "บัตรเครดิต — บาร์" },
+  { date: "2026-04-15", type: "income",  category: "เดลิเวอรี",          amount: 140000, note: "โอนเงิน — การจัดส่ง" },
   { date: "2026-04-03", type: "expense", category: "วัตถุดิบ",     amount: 240000, note: "วัตถุดิบประจำเดือน" },
   { date: "2026-04-21", type: "expense", category: "ค่าแรง",       amount: 138000, note: "เงินเดือนประจำเดือนเมษายน" },
   { date: "2026-04-01", type: "expense", category: "ค่าเช่า",      amount: 55000,  note: "ค่าเช่าร้านประจำเดือนเมษายน" },
