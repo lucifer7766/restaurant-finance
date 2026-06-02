@@ -15,11 +15,13 @@ import { formatBaht, formatMonthLabel, formatTransactionDate, getCategoryLabel }
 const THAI_MONTHS_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
 export function DashboardContent() {
-  const { selectedMonth } = useMonthFilter();
+  const { selectedMonth, availableMonths } = useMonthFilter();
   const { transactions, isLoading, error, deleteTransaction, refreshTransactions } = useTransactions();
   const [showAllTx, setShowAllTx] = useState(false);
   const [txFilter, setTxFilter] = useState<"all" | "income" | "expense">("all");
   const [editingTx, setEditingTx] = useState<Parameters<typeof EditTransactionModal>[0]["transaction"]>(null);
+  const [showCompare, setShowCompare] = useState(false);
+  const [compareMonth, setCompareMonth] = useState("");
 
   const monthLabel = formatMonthLabel(selectedMonth);
 
@@ -88,10 +90,25 @@ export function DashboardContent() {
     if (revenueGrowth < 0) {
       return { icon: "trending_down", color: "text-error", message: `รายรับลดลง ${Math.abs(revenueGrowth).toFixed(1)}% เทียบกับเดือนก่อน ควรเพิ่มยอดขาย` };
     }
+    if (revenueGrowth === 0 && prevReport.totalIncome > 0) {
+      return { icon: "trending_flat", color: "text-on-surface-variant", message: "รายรับทรงตัวเท่ากับเดือนก่อน" };
+    }
     return { icon: "info", color: "text-on-surface-variant", message: "สรุปภาพรวมธุรกิจประจำเดือนนี้พร้อมตรวจสอบ" };
-  }, [transactions, report, revenueGrowth]);
+  }, [transactions, report, revenueGrowth, prevReport]);
 
   const totalExpensesSum = report.expenseBreakdown.reduce((s, e) => s + e.amount, 0);
+
+  const compareMonthOptions = availableMonths.filter((m) => m !== selectedMonth);
+  const effectiveCompareMonth = compareMonth && compareMonth !== selectedMonth ? compareMonth : (compareMonthOptions[compareMonthOptions.length - 1] ?? "");
+  const compareReport = useMemo(
+    () => effectiveCompareMonth ? getMonthlyReportFromTransactions(transactions, effectiveCompareMonth) : null,
+    [transactions, effectiveCompareMonth]
+  );
+
+  function pctDiff(a: number, b: number) {
+    if (b === 0) return null;
+    return ((a - b) / b) * 100;
+  }
 
   /* Loading skeleton */
   if (isLoading) {
@@ -145,6 +162,13 @@ export function DashboardContent() {
           <span className="material-symbols-outlined text-[18px]">remove_circle</span>
           เพิ่มรายจ่าย
         </Link>
+        <button
+          onClick={() => setShowCompare(true)}
+          className="btn-secondary px-4"
+          aria-label="เปรียบเทียบเดือน"
+        >
+          <span className="material-symbols-outlined text-[18px]">compare_arrows</span>
+        </button>
       </div>
 
       {/* ── Alert Banner ───────────────────────────────────── */}
@@ -439,6 +463,87 @@ export function DashboardContent() {
         onClose={() => setEditingTx(null)}
         onSaved={async () => { setEditingTx(null); await refreshTransactions(); }}
       />
+
+      {/* ── Compare Drawer ─────────────────────────────────── */}
+      {showCompare && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/30"
+            onClick={() => setShowCompare(false)}
+          />
+          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-surface shadow-xl flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-surface-container-low">
+              <h3 className="font-headline-md text-headline-md text-on-surface">เปรียบเทียบเดือน</h3>
+              <button onClick={() => setShowCompare(false)} className="p-1.5 rounded-lg hover:bg-surface-container transition-colors">
+                <span className="material-symbols-outlined text-[20px] text-on-surface-variant">close</span>
+              </button>
+            </div>
+
+            {/* Month picker */}
+            <div className="px-6 py-4 border-b border-surface-container-low">
+              <p className="font-label-caps text-label-caps text-on-surface-variant mb-2">เลือกเดือนที่ต้องการเปรียบเทียบกับ {monthLabel}</p>
+              <select
+                value={compareMonth || effectiveCompareMonth}
+                onChange={(e) => setCompareMonth(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-surface-container text-on-surface font-body-md border border-outline-variant focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {compareMonthOptions.map((m) => (
+                  <option key={m} value={m}>{formatMonthLabel(m)}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Comparison rows */}
+            {compareReport && (() => {
+              const rows = [
+                { label: "รายรับ", current: report.totalIncome, compare: compareReport.totalIncome, positive: true },
+                { label: "รายจ่าย", current: report.totalExpenses, compare: compareReport.totalExpenses, positive: false },
+                { label: "กำไรสุทธิ", current: report.netProfit, compare: compareReport.netProfit, positive: true },
+                { label: "อัตรากำไร", current: report.profitMargin, compare: compareReport.profitMargin, positive: true, isPercent: true },
+              ];
+              return (
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+                  {/* Column headers */}
+                  <div className="grid grid-cols-3 gap-2 mb-1">
+                    <div />
+                    <p className="font-label-caps text-label-caps text-primary text-center">{monthLabel}</p>
+                    <p className="font-label-caps text-label-caps text-on-surface-variant text-center">{formatMonthLabel(effectiveCompareMonth)}</p>
+                  </div>
+                  {rows.map(({ label, current, compare, positive, isPercent }) => {
+                    const diff = pctDiff(current, compare);
+                    const better = positive ? current >= compare : current <= compare;
+                    return (
+                      <div key={label} className="metric-card p-4 rounded-2xl">
+                        <p className="font-label-caps text-label-caps text-on-surface-variant mb-2">{label}</p>
+                        <div className="grid grid-cols-3 gap-2 items-end">
+                          <div />
+                          <p className={`text-xl font-bold text-center ${better ? "text-primary" : "text-error"}`}>
+                            {isPercent ? `${current.toFixed(1)}%` : `฿${Math.abs(current).toLocaleString("th-TH")}`}
+                          </p>
+                          <p className="text-base font-semibold text-on-surface-variant text-center">
+                            {isPercent ? `${compare.toFixed(1)}%` : `฿${Math.abs(compare).toLocaleString("th-TH")}`}
+                          </p>
+                        </div>
+                        {diff !== null && (
+                          <div className={`mt-2 flex items-center justify-center gap-1 ${better ? "text-primary" : "text-error"}`}>
+                            <span className="material-symbols-outlined text-[14px]">
+                              {diff > 0 ? "trending_up" : diff < 0 ? "trending_down" : "trending_flat"}
+                            </span>
+                            <span className="font-label-caps text-label-caps" style={{ fontSize: "10px" }}>
+                              {diff > 0 ? "+" : ""}{diff.toFixed(1)}% จาก{formatMonthLabel(effectiveCompareMonth)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        </>
+      )}
 
     </div>
   );

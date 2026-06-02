@@ -125,6 +125,12 @@ export function CostAnalysisContent() {
       </div>
 
       {/* ── Insight alert cards ────────────────────────────── */}
+      {!topCat && !isLoading && (
+        <div className="metric-card p-5 rounded-2xl flex items-center gap-4">
+          <span className="material-symbols-outlined text-on-surface-variant text-[28px]">analytics</span>
+          <p className="font-body-md text-on-surface-variant">ยังไม่มีข้อมูลค่าใช้จ่ายสำหรับ{formatMonthLabel(selectedMonth)}</p>
+        </div>
+      )}
       {topCat && (
         <div className="space-y-3">
           {/* Alert 1: Top expense category */}

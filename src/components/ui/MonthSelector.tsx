@@ -1,11 +1,10 @@
 "use client";
 
 import { useMonthFilter } from "@/context/MonthFilterContext";
-import { availableMonths } from "@/lib/data";
 import { formatMonthLabel } from "@/lib/utils";
 
 export function MonthSelector() {
-  const { selectedMonth, setSelectedMonth } = useMonthFilter();
+  const { selectedMonth, setSelectedMonth, availableMonths } = useMonthFilter();
 
   const currentIndex = availableMonths.indexOf(selectedMonth);
   const canGoPrev = currentIndex > 0;

@@ -142,7 +142,11 @@ export function IncomeContent() {
     const seenBatches = new Set<string>();
     for (const t of monthIncome) {
       const bid = parseBatchId(t.description || "");
-      if (bid && bid !== LEGACY_BATCH_ID) {
+      if (bid === LEGACY_BATCH_ID) {
+        posPayKey["เงินสด"] += t.amount;
+        continue;
+      }
+      if (bid) {
         if (!seenBatches.has(bid)) {
           seenBatches.add(bid);
           const pay = parsePayment(t.description || "");
@@ -152,7 +156,7 @@ export function IncomeContent() {
             posPayKey["บัตรเครดิต"] += pay.card;
           }
         }
-        continue; // ข้าม POS rows จาก manual filter
+        continue;
       }
     }
 
@@ -481,7 +485,7 @@ export function IncomeContent() {
             </div>
             <div className="p-5 border-t border-surface-container-low flex items-center justify-between">
               <span className="font-label-caps text-label-caps text-on-surface-variant">
-                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredIncome.length)} of {filteredIncome.length}
+                {filteredIncome.length === 0 ? "0–0" : `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, filteredIncome.length)}`} of {filteredIncome.length}
               </span>
               <div className="flex gap-2">
                 <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}

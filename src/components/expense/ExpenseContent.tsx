@@ -56,7 +56,7 @@ export function ExpenseContent() {
     category: null, note: null, confidence: "unreadable",
   };
 
-  /** Compress image via canvas — max 900px wide, quality 0.55, output JPEG */
+  /** Compress image via canvas — max 900px wide, quality 0.75, output JPEG */
   async function compressImage(file: File): Promise<{ base64: string; mimeType: string }> {
     return new Promise((resolve, reject) => {
       console.log("[compress] original size:", (file.size / 1024).toFixed(1), "KB");
@@ -77,7 +77,7 @@ export function ExpenseContent() {
         const ctx = canvas.getContext("2d");
         if (!ctx) { reject(new Error("canvas not supported")); return; }
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.55);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
         const b64 = dataUrl.split(",")[1] ?? "";
         const compressedKB = Math.ceil((b64.length * 3) / 4) / 1024;
         console.log("[compress] compressed size:", compressedKB.toFixed(1), "KB", "| dimensions:", width, "x", height);

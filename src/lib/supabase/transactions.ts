@@ -130,6 +130,29 @@ export async function updateTransaction(
     throw new Error(formatSupabaseError(error));
   }
 }
+export async function fetchAvailableMonths(): Promise<string[]> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("date");
+
+  if (error) {
+    throw new Error(formatSupabaseError(error));
+  }
+
+  const monthSet = new Set<string>();
+  for (const row of data ?? []) {
+    const m = (row.date as string).slice(0, 7);
+    if (/^\d{4}-\d{2}$/.test(m)) monthSet.add(m);
+  }
+
+  const now = new Date();
+  monthSet.add(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+
+  return Array.from(monthSet).sort();
+}
+
 export async function deleteTransaction(id: string): Promise<void> {
   const supabase = getSupabaseClient();
 

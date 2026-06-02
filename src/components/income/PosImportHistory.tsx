@@ -239,7 +239,7 @@ export function DeleteConfirmModal({
           </p>
           <div className="mt-3 p-3 rounded-xl bg-surface-container space-y-1">
             <p className="text-sm text-on-surface">{batch.transactions.length} หมวดหมู่ · ยอดรวม {fmt(batch.totalAmount)}</p>
-            <p className="text-xs text-on-surface-variant">จะลบ {batch.transactions.length} records (ids: {batch.transactions.map(t => t.id.slice(0,8)).join(", ")}...)</p>
+            <p className="text-xs text-on-surface-variant">จะลบ {batch.transactions.length} records ออกจากระบบ</p>
           </div>
           {batch.isLegacy ? (
             <div className="mt-3 p-3 rounded-xl bg-tertiary-container">
