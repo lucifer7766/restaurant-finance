@@ -1,0 +1,4 @@
+date,category,payment_method,amount thb
+2026-03-01,Food Sales,เงินสด,1000
+2026-03-01,Beverage,โอนเงิน,0
+2026-03-01,Delivery,บัตรเครดิต,300
