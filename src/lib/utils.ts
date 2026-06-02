@@ -79,14 +79,21 @@ export const categoryLabels: Record<string, string> = {
 /** แปลง POS note → "POS · หมวดหมู่ไทย · ช่องทางชำระเงิน" */
 export function formatPosNote(description: string, category: string): string {
   const thaiCat = getCategoryLabel(category);
+  // อ่าน method: ที่บันทึกต่อ category (format ใหม่)
+  const methodMatch = description.match(/method:([^|]+)/);
+  if (methodMatch) {
+    const method = methodMatch[1].trim();
+    return `POS · ${thaiCat} · ${method}`;
+  }
+  // fallback format เก่า — ใช้ช่องทางที่มียอดสูงสุด
   const payMatch = description.match(/pay:([^\s]+)/);
   if (!payMatch) return `POS · ${thaiCat}`;
-  const methods = payMatch[1]
+  const top = payMatch[1]
     .split(",")
     .map((p) => { const [k, v] = p.split("="); return { k, v: Number(v) }; })
     .filter((p) => p.v > 0)
-    .map((p) => p.k);
-  return methods.length > 0 ? `POS · ${thaiCat} · ${methods.join(", ")}` : `POS · ${thaiCat}`;
+    .sort((a, b) => b.v - a.v)[0];
+  return top ? `POS · ${thaiCat} · ${top.k}` : `POS · ${thaiCat}`;
 }
 
 export function getCategoryLabel(category: string): string {

@@ -169,13 +169,13 @@ test("Compare — ปุ่มเปรียบเทียบเปิด draw
   await page.click('button[aria-label="เปรียบเทียบเดือน"]');
 
   // drawer ต้องขึ้น
-  await expect(page.getByText("เปรียบเทียบเดือน")).toBeVisible({ timeout: 5000 });
+  const drawer = page.locator('.fixed.inset-y-0.right-0');
+  await expect(drawer).toBeVisible({ timeout: 5000 });
 
   // มี dropdown เลือกเดือน
   await expect(page.locator("select")).toBeVisible();
 
   // มี metric rows ใน drawer
-  const drawer = page.locator('.fixed.inset-y-0.right-0');
   await expect(drawer.getByText("รายรับ").first()).toBeVisible();
   await expect(drawer.getByText("รายจ่าย").first()).toBeVisible();
   await expect(drawer.getByText("กำไรสุทธิ")).toBeVisible();

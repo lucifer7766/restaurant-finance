@@ -11,7 +11,7 @@ import { updateTransaction, deleteTransaction as deleteTransactionFromSupabase }
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth } from "@/lib/data";
-import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
+import { formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote } from "@/lib/utils";
 
 function getPrevMonth(monthKey: string): string {
   const [y, m] = monthKey.split("-").map(Number);
@@ -404,7 +404,7 @@ export function IncomeContent() {
                       <span className={`material-symbols-outlined text-[16px] ${meta.iconColor}`}>{meta.icon}</span>
                     </div>
                     <span className="font-body-md text-on-surface text-sm leading-tight truncate">
-                      {tx.description || getCategoryLabel(tx.category)}
+                      {tx.description && (tx.description.startsWith("POS_IMPORT_") || tx.description.startsWith("POS Import:")) ? formatPosNote(tx.description, tx.category ?? "") : (tx.description || getCategoryLabel(tx.category))}
                     </span>
                   </div>
                   <div className="text-right shrink-0">
@@ -449,7 +449,7 @@ export function IncomeContent() {
                             <span className={`material-symbols-outlined text-[14px] ${meta.iconColor}`}>{meta.icon}</span>
                           </div>
                           <span className="font-body-md text-on-surface text-sm leading-tight truncate">
-                            {tx.description || getCategoryLabel(tx.category)}
+                            {tx.description && (tx.description.startsWith("POS_IMPORT_") || tx.description.startsWith("POS Import:")) ? formatPosNote(tx.description, tx.category ?? "") : (tx.description || getCategoryLabel(tx.category))}
                           </span>
                         </div>
                         <p className="font-semibold text-sm text-primary whitespace-nowrap text-right">
@@ -592,7 +592,7 @@ export function IncomeContent() {
               type: "income" as const,
               category: g.category,
               amount: g.amount,
-              note: `${batchId} | ${g.category} | รวม ${g.count} รายการ | ${payStr}`,
+              note: `${batchId} | ${g.category} | รวม ${g.count} รายการ | method:${g.paymentSummary} | ${payStr}`,
             });
           }
           await refreshTransactions();
