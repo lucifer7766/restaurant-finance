@@ -193,3 +193,40 @@ body {
 .material-symbols-outlined {
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
 }
+
+/* ─── Print / PDF styles ───────────────────────────────────────────────────── */
+@media print {
+  /* hide nav, buttons, sidebar */
+  nav, footer, .print\:hidden,
+  [class*="BottomNav"], [class*="TopAppBar"], [class*="AppSidebar"] {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  /* flatten card backgrounds */
+  .metric-card, .sand-card, .sand-card-light {
+    background: white !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  /* keep colors readable in print */
+  .text-primary { color: #1a4d2e !important; }
+  .text-error   { color: #c0392b !important; }
+
+  /* full width */
+  .lg\:ml-64, [class*="ml-64"] { margin-left: 0 !important; }
+  .pb-24 { padding-bottom: 0 !important; }
+
+  /* page title */
+  @page {
+    margin: 16mm 12mm;
+    size: A4 portrait;
+  }
+}

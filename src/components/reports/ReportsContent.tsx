@@ -190,7 +190,7 @@ export function ReportsContent() {
         className="btn-primary w-full py-3.5 text-base print:hidden"
       >
         <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
-        Export PDF
+        บันทึก PDF / พิมพ์รายงาน
       </button>
 
       {/* ── Metric cards ───────────────────────────────────── */}
