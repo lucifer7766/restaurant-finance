@@ -11,13 +11,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setIsPending(true);
 
-    const errMsg = await signIn(email, password);
+    const errMsg = await signIn(email, password, rememberMe);
 
     if (errMsg) {
       setError(errMsg);
@@ -95,6 +96,18 @@ export default function LoginPage() {
               }}
             />
           </div>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded accent-[var(--color-primary)] cursor-pointer"
+            />
+            <span className="text-sm" style={{ color: "var(--color-on-surface-variant)" }}>
+              จดจำอุปกรณ์นี้
+            </span>
+          </label>
 
           {error && (
             <p className="text-sm" style={{ color: "var(--color-error)" }}>

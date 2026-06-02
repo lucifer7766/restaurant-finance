@@ -13,7 +13,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<string | null>;
+  signIn: (email: string, password: string, rememberMe: boolean) => Promise<string | null>;
   signOut: () => Promise<void>;
 }
 
@@ -28,7 +28,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     void supabase.auth.getUser().then(
       (result: Awaited<ReturnType<typeof supabase.auth.getUser>>) => {
-        setUser(result.data.user);
+        const loggedIn = !!result.data.user;
+        const noRemember = localStorage.getItem("plu-no-remember") === "1";
+        const sessionActive = sessionStorage.getItem("plu-session-active") === "1";
+        if (loggedIn && noRemember && !sessionActive) {
+          supabase.auth.signOut();
+          setUser(null);
+        } else {
+          setUser(result.data.user);
+        }
         setIsLoading(false);
       }
     );
@@ -43,12 +51,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(
-    async (email: string, password: string): Promise<string | null> => {
+    async (email: string, password: string, rememberMe: boolean): Promise<string | null> => {
       const supabase = getSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error) {
+        if (rememberMe) {
+          localStorage.removeItem("plu-no-remember");
+        } else {
+          localStorage.setItem("plu-no-remember", "1");
+        }
+        sessionStorage.setItem("plu-session-active", "1");
+      }
       return error ? error.message : null;
     },
     []
