@@ -10,6 +10,7 @@ import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib
 import { ReceiptScanModal, type ScanResult } from "@/components/expense/ReceiptScanModal";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import { RecurringExpensePanel } from "@/components/expense/RecurringExpensePanel";
+import { PinGate } from "@/components/ui/PinGate";
 import type { RecurringTemplate } from "@/lib/recurring";
 
 const EXPENSE_CATEGORY_META: Record<string, { icon: string; iconColor: string; bg: string }> = {
@@ -51,7 +52,12 @@ export function ExpenseContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [editingTx, setEditingTx] = useState<Parameters<typeof EditTransactionModal>[0]["transaction"]>(null);
+  const [pinTarget, setPinTarget] = useState<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function withPin(action: () => void) {
+    setPinTarget(() => action);
+  }
 
   const FALLBACK_RESULT: ScanResult = {
     amount: null, date: new Date().toISOString().slice(0, 10),
@@ -438,11 +444,11 @@ export function ExpenseContent() {
                           <span className="material-symbols-outlined text-[18px]">edit</span>
                         </button>
                         <button
-                          onClick={async () => {
+                          onClick={() => withPin(async () => {
                             if (!window.confirm("ลบรายการนี้?")) return;
                             try { await deleteTransaction(tx.id); }
                             catch (e) { alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ"); }
-                          }}
+                          })}
                           className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
                         >
                           <span className="material-symbols-outlined text-[18px]">delete</span>
@@ -502,6 +508,13 @@ export function ExpenseContent() {
         }}
         initialData={scanResult}
       />
+
+      {pinTarget && (
+        <PinGate
+          onUnlock={() => { pinTarget(); setPinTarget(null); }}
+          onCancel={() => setPinTarget(null)}
+        />
+      )}
 
     </div>
   );

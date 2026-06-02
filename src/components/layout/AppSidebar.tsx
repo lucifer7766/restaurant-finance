@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { PinSettings } from "@/components/ui/PinSettings";
 
 const navItems = [
   { href: "/dashboard", label: "แดชบอร์ด", icon: "dashboard" },
@@ -69,6 +70,7 @@ export function AppSidebar() {
             {user.email}
           </p>
         )}
+        <PinSettings />
         <button
           onClick={handleSignOut}
           className="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-variant transition-all w-full text-left"
