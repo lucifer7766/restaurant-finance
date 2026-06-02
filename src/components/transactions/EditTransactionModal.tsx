@@ -19,6 +19,10 @@ type Props = {
   onSaved: () => void;
 };
 
+function isPosTransaction(note: string) {
+  return note?.startsWith("POS_IMPORT_") || note?.startsWith("POS Import:");
+}
+
 export default function EditTransactionModal({ transaction, onClose, onSaved }: Props) {
   const [form, setForm] = useState({
     date: "",
@@ -43,6 +47,8 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
   }, [transaction]);
 
   if (!transaction) return null;
+
+  const isPos = isPosTransaction(transaction.note ?? "");
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -117,8 +123,15 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
             </div>
           )}
 
+          {isPos && (
+            <div className="flex items-center gap-2 p-3 bg-surface-container rounded-xl">
+              <span className="material-symbols-outlined text-primary text-[18px]">point_of_sale</span>
+              <p className="font-body-sm text-on-surface-variant">รายการ POS — แก้ได้เฉพาะวันที่และยอดเงิน</p>
+            </div>
+          )}
+
           {/* Type toggle */}
-          <div className="flex rounded-xl bg-surface-container p-1 gap-1">
+          <div className={`flex rounded-xl bg-surface-container p-1 gap-1 ${isPos ? "opacity-50 pointer-events-none" : ""}`}>
             <button
               type="button"
               onClick={() => setForm((f) => ({ ...f, type: "income" }))}
@@ -166,7 +179,8 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
               value={form.category}
               onChange={handleChange}
               placeholder="เช่น วัตถุดิบ, ค่าแรง, รายได้จากขาย"
-              className="w-full bg-secondary-container rounded-xl px-4 py-3 font-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant"
+              readOnly={isPos}
+              className={`w-full bg-secondary-container rounded-xl px-4 py-3 font-body-md text-on-surface outline-none placeholder:text-on-surface-variant ${isPos ? "opacity-50 cursor-not-allowed" : "focus:ring-2 focus:ring-primary"}`}
             />
           </div>
 
@@ -197,11 +211,12 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
             </label>
             <textarea
               name="note"
-              value={form.note}
+              value={isPos ? "" : form.note}
               onChange={handleChange}
               rows={2}
-              placeholder="รายละเอียดเพิ่มเติม..."
-              className="w-full bg-secondary-container rounded-xl px-4 py-3 font-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant resize-none"
+              placeholder={isPos ? "—" : "รายละเอียดเพิ่มเติม..."}
+              readOnly={isPos}
+              className={`w-full bg-secondary-container rounded-xl px-4 py-3 font-body-md text-on-surface outline-none placeholder:text-on-surface-variant resize-none ${isPos ? "opacity-50 cursor-not-allowed" : "focus:ring-2 focus:ring-primary"}`}
             />
           </div>
         </div>
