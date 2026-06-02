@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import { useMonthFilter } from "@/context/MonthFilterContext";
@@ -40,8 +40,10 @@ export function ExpenseContent() {
   useEffect(() => { if (searchParams.get("view") === "all") setShowAll(true); }, [searchParams]);
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
   const [page, setPage] = useState(0);
+  const router = useRouter();
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [slipScanning, setSlipScanning] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [editingTx, setEditingTx] = useState<Parameters<typeof EditTransactionModal>[0]["transaction"]>(null);
@@ -49,6 +51,7 @@ export function ExpenseContent() {
   const [deletingTxId, setDeletingTxId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const slipFileRef = useRef<HTMLInputElement>(null);
 
   function withPin(action: () => void) {
     setPinTarget(() => action);
@@ -164,6 +167,30 @@ export function ExpenseContent() {
     }
   }
 
+  async function handleSlipFile(file: File) {
+    setSlipScanning(true);
+    try {
+      const compressed = await compressImage(file);
+      const res = await fetch("/api/scan-slip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: compressed.base64, mimeType: compressed.mimeType }),
+      });
+      const data: ScanResult = res.ok ? await res.json() : FALLBACK_RESULT;
+      const params = new URLSearchParams({ source: "slip" });
+      if (data.amount != null) params.set("amount", String(data.amount));
+      if (data.date) params.set("date", data.date);
+      params.set("category", data.category ?? "วัตถุดิบ");
+      params.set("note", data.note ?? "จากสลิปธนาคาร");
+      router.push(`/expense/new?${params.toString()}`);
+    } catch {
+      router.push("/expense/new?source=slip&category=วัตถุดิบ&note=จากสลิปธนาคาร");
+    } finally {
+      setSlipScanning(false);
+      if (slipFileRef.current) slipFileRef.current.value = "";
+    }
+  }
+
   const monthLabel = formatMonthLabel(selectedMonth);
 
   const allExpenses = useMemo(
@@ -265,6 +292,19 @@ export function ExpenseContent() {
           {scanning ? "กำลังสแกน..." : "ถ่ายรูปใบเสร็จ"}
         </label>
       </div>
+      <label className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-outline-variant font-body-md text-on-surface-variant cursor-pointer hover:bg-surface-container hover:border-primary hover:text-primary transition-all ${slipScanning ? "opacity-60 pointer-events-none" : ""}`}>
+        <input
+          ref={slipFileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlipFile(f); }}
+        />
+        <span className="material-symbols-outlined text-[18px]">
+          {slipScanning ? "hourglass_top" : "account_balance"}
+        </span>
+        {slipScanning ? "กำลังอ่านสลิป..." : "สแกนสลิปธนาคาร"}
+      </label>
 
       {/* ── เปรียบเทียบเดือน ── */}
       <div className="metric-card rounded-2xl overflow-hidden">

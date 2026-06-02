@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 
 // BUG-006: ใช้ชื่อภาษาไทยล้วน ตรงกับข้อมูลเดิมใน DB
@@ -18,13 +18,15 @@ const EXPENSE_CATEGORIES = [
 
 export function ExpenseNewForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { addTransaction } = useTransactions();
 
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("วัตถุดิบ");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const fromSlip = searchParams.get("source") === "slip";
+  const [amount, setAmount] = useState(searchParams.get("amount") ?? "");
+  const [category, setCategory] = useState(searchParams.get("category") ?? "วัตถุดิบ");
+  const [date, setDate] = useState(searchParams.get("date") ?? new Date().toISOString().slice(0, 10));
   const [payStatus, setPayStatus] = useState<"paid" | "pending">("paid");
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(searchParams.get("note") ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -77,6 +79,17 @@ export function ExpenseNewForm() {
         </button>
         <h2 className="font-headline-lg text-headline-lg-mobile text-on-surface">เพิ่มรายจ่าย</h2>
       </div>
+
+      {/* ── Slip source banner ──────────────────────────────── */}
+      {fromSlip && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary-container">
+          <span className="material-symbols-outlined text-on-primary-container text-[20px]">receipt_long</span>
+          <div>
+            <p className="font-body-md text-on-primary-container font-semibold">ข้อมูลจากสลิปธนาคาร</p>
+            <p className="font-label-caps text-label-caps text-on-primary-container opacity-80">ตรวจสอบยอดเงินและวันที่ก่อนกดบันทึก</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Main card ──────────────────────────────────────── */}
       <div className="metric-card rounded-2xl overflow-hidden">
