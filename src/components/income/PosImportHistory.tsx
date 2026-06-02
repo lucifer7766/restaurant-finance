@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getCategoryLabel } from "@/lib/utils";
 
 /* ── Types ── */
 
@@ -329,7 +330,7 @@ export function PosImportHistory({ batches, onDelete, onEdit, editingBatch, dele
           <div className="flex flex-wrap gap-2">
             {batch.transactions.map((t) => (
               <div key={t.id} className="bg-surface-container rounded-lg px-2 py-1 flex items-center gap-1.5">
-                <span className="text-xs text-on-surface-variant">{t.category}</span>
+                <span className="text-xs text-on-surface-variant">{getCategoryLabel(t.category)}</span>
                 <span className="text-xs font-medium text-primary">{fmt(t.amount)}</span>
               </div>
             ))}
