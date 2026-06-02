@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { useMonthFilter } from "@/context/MonthFilterContext";
@@ -154,20 +153,13 @@ export function DashboardContent() {
 
       {/* ── Action buttons ─────────────────────────────────── */}
       <div className="flex gap-3">
-        <Link href="/income/new" className="btn-primary flex-1 text-center">
-          <span className="material-symbols-outlined text-[18px]">add_circle</span>
-          เพิ่มรายรับ
-        </Link>
-        <Link href="/expense/new" className="btn-secondary flex-1 text-center">
-          <span className="material-symbols-outlined text-[18px]">remove_circle</span>
-          เพิ่มรายจ่าย
-        </Link>
         <button
           onClick={() => setShowCompare(true)}
-          className="btn-secondary px-4"
+          className="btn-secondary flex-1"
           aria-label="เปรียบเทียบเดือน"
         >
           <span className="material-symbols-outlined text-[18px]">compare_arrows</span>
+          เปรียบเทียบเดือน
         </button>
       </div>
 
