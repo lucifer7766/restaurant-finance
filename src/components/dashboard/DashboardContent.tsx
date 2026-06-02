@@ -9,7 +9,7 @@ import {
   filterTransactionsByMonth,
   getMonthlyReportFromTransactions,
 } from "@/lib/data";
-import { formatBaht, formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
+import { formatBaht, formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote } from "@/lib/utils";
 
 const THAI_MONTHS_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
@@ -399,7 +399,7 @@ export function DashboardContent() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-body-md text-on-surface truncate">
-                          {isPOS(tx) ? `POS · ${getCategoryLabel(tx.category)}` : (tx.description || getCategoryLabel(tx.category))}
+                          {isPOS(tx) ? formatPosNote(tx.description ?? "", tx.category ?? "") : (tx.description || getCategoryLabel(tx.category))}
                         </p>
                         <p className="font-label-caps text-label-caps text-on-surface-variant">
                           {getCategoryLabel(tx.category)} · {formatTransactionDate(tx.date)}
@@ -439,7 +439,7 @@ export function DashboardContent() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-body-md text-on-surface truncate">
-                      {isPOS(tx) ? `POS · ${getCategoryLabel(tx.category)}` : (tx.description || getCategoryLabel(tx.category))}
+                      {isPOS(tx) ? formatPosNote(tx.description ?? "", tx.category ?? "") : (tx.description || getCategoryLabel(tx.category))}
                     </p>
                     <p className="font-label-caps text-label-caps text-on-surface-variant">
                       {getCategoryLabel(tx.category)} · {formatTransactionDate(tx.date)}

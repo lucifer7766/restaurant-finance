@@ -8,7 +8,7 @@ import {
   getMonthlyReportFromTransactions,
   filterTransactionsByMonth,
 } from "@/lib/data";
-import { formatMonthLabel, formatTransactionDate } from "@/lib/utils";
+import { formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote } from "@/lib/utils";
 
 function formatMoney(amount: number) {
   return amount.toLocaleString("th-TH", {
@@ -379,8 +379,12 @@ export function ReportsContent() {
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-body-md text-on-surface truncate">{tx.description || tx.category}</p>
-                  <p className="font-label-caps text-label-caps text-on-surface-variant">{tx.category} · {formatTransactionDate(tx.date)}</p>
+                  <p className="font-body-md text-on-surface truncate">
+                    {tx.description && (tx.description.startsWith("POS_IMPORT_") || tx.description.startsWith("POS Import:"))
+                      ? formatPosNote(tx.description, tx.category)
+                      : (tx.description || getCategoryLabel(tx.category))}
+                  </p>
+                  <p className="font-label-caps text-label-caps text-on-surface-variant">{getCategoryLabel(tx.category)} · {formatTransactionDate(tx.date)}</p>
                 </div>
                 <div className={`font-price-table text-price-table shrink-0 ${
                   tx.type === "income" ? "text-primary" : "text-error"

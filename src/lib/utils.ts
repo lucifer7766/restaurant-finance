@@ -45,6 +45,14 @@ export const categoryLabels: Record<string, string> = {
   Sales: "รายได้",
   COGS: "ต้นทุนขาย",
   Operations: "ค่าใช้จ่ายดำเนินงาน",
+  // English POS categories → Thai
+  "Food Sales": "ยอดขายอาหาร",
+  "Beverage": "ยอดขายเครื่องดื่ม",
+  "Beverages": "ยอดขายเครื่องดื่ม",
+  "Delivery": "เดลิเวอรี",
+  "Catering": "จัดเลี้ยง",
+  "Other": "อื่นๆ",
+  "Others": "อื่นๆ",
   // Thai expense categories — normalize any spacing variants
   "วัตถุดิบ": "วัตถุดิบ",
   "วัตถุ ดิบ": "วัตถุดิบ",
@@ -67,6 +75,19 @@ export const categoryLabels: Record<string, string> = {
   "เดลิเวอรี": "เดลิเวอรี",
   "จัดเลี้ยง": "จัดเลี้ยง",
 };
+
+/** แปลง POS note → "POS · หมวดหมู่ไทย · ช่องทางชำระเงิน" */
+export function formatPosNote(description: string, category: string): string {
+  const thaiCat = getCategoryLabel(category);
+  const payMatch = description.match(/pay:([^\s]+)/);
+  if (!payMatch) return `POS · ${thaiCat}`;
+  const methods = payMatch[1]
+    .split(",")
+    .map((p) => { const [k, v] = p.split("="); return { k, v: Number(v) }; })
+    .filter((p) => p.v > 0)
+    .map((p) => p.k);
+  return methods.length > 0 ? `POS · ${thaiCat} · ${methods.join(", ")}` : `POS · ${thaiCat}`;
+}
 
 export function getCategoryLabel(category: string): string {
   if (!category) return "-";

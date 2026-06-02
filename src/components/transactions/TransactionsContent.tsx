@@ -9,6 +9,7 @@ import {
   type NewTransaction,
 } from "@/lib/supabase/transactions";
 import { formatSupabaseError } from "@/lib/supabase/errors";
+import { getCategoryLabel, formatPosNote } from "@/lib/utils";
 import EditTransactionModal from "./EditTransactionModal";
 import * as XLSX from "xlsx";
 
@@ -48,8 +49,14 @@ function formatBaht(amount: number) {
   })}`;
 }
 
+function isPOS(desc: string) {
+  return desc.startsWith("POS_IMPORT_") || desc.startsWith("POS Import:");
+}
+
 function getText(transaction: AppTransaction) {
-  return transaction.note || transaction.description || "-";
+  const desc = transaction.note || transaction.description || "";
+  if (desc && isPOS(desc)) return formatPosNote(desc, transaction.category ?? "");
+  return desc || "-";
 }
 
 /* ─── Provider ─────────────────────────────────────────────────────────────── */
@@ -441,7 +448,7 @@ export function TransactionsContent() {
                 <div className="flex-1 min-w-0">
                   <p className="font-body-md text-on-surface truncate">{getText(item)}</p>
                   <p className="font-label-caps text-label-caps text-on-surface-variant">
-                    {item.category || "-"} · {item.date}
+                    {getCategoryLabel(item.category ?? "")} · {item.date}
                   </p>
                 </div>
                 <p className={`font-semibold text-sm whitespace-nowrap shrink-0 ${
