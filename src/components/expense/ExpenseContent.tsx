@@ -186,6 +186,11 @@ export function ExpenseContent() {
     [allExpenses, selectedMonth]
   );
 
+  const prevTotalExpense = useMemo(
+    () => prevMonthExpenses.reduce((s, t) => s + t.amount, 0),
+    [prevMonthExpenses]
+  );
+
   const prevCategoryTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     prevMonthExpenses.forEach((t) => {
@@ -387,6 +392,20 @@ export function ExpenseContent() {
               {totalExpense.toLocaleString("th-TH")}
             </span>
           </div>
+          {prevTotalExpense > 0 ? (() => {
+            const trend = ((totalExpense - prevTotalExpense) / prevTotalExpense) * 100;
+            const up = trend > 0;
+            return (
+              <div className={`mt-3 flex items-center gap-1.5 ${up ? "text-error" : "text-primary"}`}>
+                <span className="material-symbols-outlined text-[16px]">{up ? "trending_up" : "trending_down"}</span>
+                <span className="font-label-caps text-label-caps">
+                  {up ? "+" : ""}{trend.toFixed(1)}% จากเดือนก่อน
+                </span>
+              </div>
+            );
+          })() : (
+            <p className="mt-3 font-label-caps text-label-caps text-on-surface-variant">ไม่มีข้อมูลเดือนก่อน</p>
+          )}
         </div>
       )}
 
