@@ -264,7 +264,7 @@ export function ReportsContent() {
               {profit >= 0 ? "check_circle" : "cancel"}
             </span>
             <span className="font-label-caps text-label-caps">
-              {profit >= 0 ? `Margin ${margin.toFixed(1)}%` : "ขาดทุน"}
+              {profit >= 0 ? `อัตรากำไร ${margin.toFixed(1)}%` : "ขาดทุน"}
             </span>
           </div>
         </div>

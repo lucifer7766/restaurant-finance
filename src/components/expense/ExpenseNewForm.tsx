@@ -162,7 +162,7 @@ export function ExpenseNewForm() {
                 }`}
               >
                 <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                จ่ายแล้ว (Paid)
+                จ่ายแล้ว
               </button>
               <button
                 onClick={() => setPayStatus("pending")}
@@ -173,7 +173,7 @@ export function ExpenseNewForm() {
                 }`}
               >
                 <span className="material-symbols-outlined text-[18px]">schedule</span>
-                ค้างชำระ (Pending)
+                ค้างชำระ
               </button>
             </div>
           </div>
