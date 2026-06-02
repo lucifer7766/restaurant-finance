@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import * as XLSX from "xlsx";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import {
   getMonthlyReportFromTransactions,
   filterTransactionsByMonth,
+  type RecentTransaction,
 } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote } from "@/lib/utils";
 
@@ -23,11 +24,37 @@ function getPrevMonthKey(monthKey: string): string {
   return `${y}-${String(m - 1).padStart(2, "0")}`;
 }
 
+/* ─── helpers ────────────────────────────────────────────────────────────── */
+
+function safePct(a: number, b: number): string {
+  if (b === 0 || !isFinite(b) || !isFinite(a)) return "—";
+  const v = ((a - b) / Math.abs(b)) * 100;
+  if (!isFinite(v) || isNaN(v)) return "—";
+  return (v > 0 ? "+" : "") + v.toFixed(1) + "%";
+}
+
+function diffLabel(a: number, b: number): "up" | "down" | "same" {
+  if (a > b) return "up";
+  if (a < b) return "down";
+  return "same";
+}
+
+function getIncomeBreakdown(transactions: RecentTransaction[], monthKey: string) {
+  const map: Record<string, number> = {};
+  for (const t of transactions) {
+    if (t.type === "income" && t.date?.startsWith(monthKey)) {
+      map[t.category] = (map[t.category] ?? 0) + t.amount;
+    }
+  }
+  return map;
+}
+
 /* ─── ReportsContent ─────────────────────────────────────────────────────── */
 
 export function ReportsContent() {
   const { transactions, isLoading, error: loadError } = useTransactions();
   const { selectedMonth } = useMonthFilter();
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const report = useMemo(
     () => getMonthlyReportFromTransactions(transactions, selectedMonth),
@@ -63,6 +90,26 @@ export function ReportsContent() {
     const nextMonth = `${nextY}-${String(nextM).padStart(2, "0")}`;
     return { avgIncome, avgExpense, avgProfit: avgIncome - avgExpense, nextMonth, months: validIncome.length };
   }, [transactions, selectedMonth]);
+
+  /* ── Available months for compare dropdowns ── */
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of transactions) {
+      if (t.date && t.date.length >= 7) set.add(t.date.slice(0, 7));
+    }
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [transactions]);
+
+  const [monthA, setMonthA] = useState<string>(() => selectedMonth);
+  const [monthB, setMonthB] = useState<string>(() => getPrevMonthKey(selectedMonth));
+
+  const compareA = useMemo(() => getMonthlyReportFromTransactions(transactions, monthA), [transactions, monthA]);
+  const compareB = useMemo(() => getMonthlyReportFromTransactions(transactions, monthB), [transactions, monthB]);
+  const incomeBreakA = useMemo(() => getIncomeBreakdown(transactions, monthA), [transactions, monthA]);
+  const incomeBreakB = useMemo(() => getIncomeBreakdown(transactions, monthB), [transactions, monthB]);
+
+  const noDataA = compareA.totalIncome === 0 && compareA.totalExpenses === 0;
+  const noDataB = compareB.totalIncome === 0 && compareB.totalExpenses === 0;
 
   const { income, expense, profit, margin } = useMemo(() => ({
     income: report.totalIncome,
@@ -212,6 +259,208 @@ export function ReportsContent() {
         <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
         บันทึก PDF / พิมพ์รายงาน
       </button>
+
+      {/* ── เปรียบเทียบเดือน ────────────────────────────────── */}
+      <div className="metric-card rounded-2xl overflow-hidden print:hidden">
+        <button
+          onClick={() => setCompareOpen((v) => !v)}
+          className="w-full p-6 flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-on-primary-container text-[20px]">compare_arrows</span>
+            </div>
+            <div>
+              <h3 className="font-headline-md text-headline-md text-on-surface">เปรียบเทียบเดือน</h3>
+              <p className="font-label-caps text-label-caps text-on-surface-variant">เลือก 2 เดือนเพื่อดูส่วนต่าง</p>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-on-surface-variant">
+            {compareOpen ? "expand_less" : "expand_more"}
+          </span>
+        </button>
+
+        {compareOpen && (
+          <div className="px-6 pb-6 space-y-5">
+            {/* Dropdowns */}
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">เดือน A</p>
+                <select
+                  value={monthA}
+                  onChange={(e) => setMonthA(e.target.value)}
+                  className="w-full bg-surface-container rounded-xl px-3 py-2.5 font-body-md text-on-surface border border-outline-variant focus:outline-none focus:border-primary text-sm"
+                >
+                  {availableMonths.map((m) => (
+                    <option key={m} value={m}>{formatMonthLabel(m)}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={() => { setMonthA(monthB); setMonthB(monthA); }}
+                className="w-9 h-9 mb-0.5 rounded-xl border border-outline-variant flex items-center justify-center hover:bg-surface-container transition-all shrink-0"
+                title="สลับเดือน"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">swap_horiz</span>
+              </button>
+              <div className="flex-1">
+                <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">เดือน B</p>
+                <select
+                  value={monthB}
+                  onChange={(e) => setMonthB(e.target.value)}
+                  className="w-full bg-surface-container rounded-xl px-3 py-2.5 font-body-md text-on-surface border border-outline-variant focus:outline-none focus:border-primary text-sm"
+                >
+                  {availableMonths.map((m) => (
+                    <option key={m} value={m}>{formatMonthLabel(m)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {noDataA && noDataB ? (
+              <p className="text-center font-body-md text-on-surface-variant py-6">ไม่มีข้อมูลเปรียบเทียบ</p>
+            ) : (
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full table-fixed text-sm min-w-[480px]">
+                  <colgroup>
+                    <col className="w-[30%]" />
+                    <col className="w-[17%]" />
+                    <col className="w-[17%]" />
+                    <col className="w-[20%]" />
+                    <col className="w-[16%]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b-2 border-surface-variant">
+                      <th className="py-2.5 pr-2 text-left font-label-caps text-label-caps text-on-surface-variant">รายการ</th>
+                      <th className="py-2.5 px-1 text-right font-label-caps text-label-caps text-on-surface-variant">
+                        {noDataA ? "—" : formatMonthLabel(monthA)}
+                      </th>
+                      <th className="py-2.5 px-1 text-right font-label-caps text-label-caps text-on-surface-variant">
+                        {noDataB ? "—" : formatMonthLabel(monthB)}
+                      </th>
+                      <th className="py-2.5 px-1 text-right font-label-caps text-label-caps text-on-surface-variant">ส่วนต่าง</th>
+                      <th className="py-2.5 pl-1 text-right font-label-caps text-label-caps text-on-surface-variant">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* ── Summary rows ── */}
+                    {[
+                      { label: "รายรับรวม", a: compareA.totalIncome, b: compareB.totalIncome, isProfit: true },
+                      { label: "รายจ่ายรวม", a: compareA.totalExpenses, b: compareB.totalExpenses, isProfit: false },
+                      { label: "กำไรสุทธิ", a: compareA.netProfit, b: compareB.netProfit, isProfit: true },
+                    ].map(({ label, a, b, isProfit }) => {
+                      const diff = a - b;
+                      const dir = diffLabel(a, b);
+                      const isGood = isProfit ? dir === "up" : dir === "down";
+                      return (
+                        <tr key={label} className="border-b border-surface-variant">
+                          <td className="py-3 pr-2 font-body-md text-on-surface">{label}</td>
+                          <td className="py-3 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums">
+                            {noDataA ? <span className="text-on-surface-variant text-xs">ไม่มีข้อมูล</span> : `฿${formatMoney(a)}`}
+                          </td>
+                          <td className="py-3 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums">
+                            {noDataB ? <span className="text-on-surface-variant text-xs">ไม่มีข้อมูล</span> : `฿${formatMoney(b)}`}
+                          </td>
+                          <td className={`py-3 px-1 text-right font-price-table text-price-table tabular-nums ${dir === "same" ? "text-on-surface-variant" : isGood ? "text-primary" : "text-error"}`}>
+                            {dir === "same" ? "—" : `${diff > 0 ? "+" : "-"}฿${formatMoney(Math.abs(diff))}`}
+                          </td>
+                          <td className={`py-3 pl-1 text-right font-label-caps text-label-caps ${dir === "same" ? "text-on-surface-variant" : isGood ? "text-primary" : "text-error"}`}>
+                            {dir === "up" ? "▲ " : dir === "down" ? "▼ " : ""}{safePct(a, b)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {/* อัตรากำไร */}
+                    {(() => {
+                      const mA = compareA.profitMargin;
+                      const mB = compareB.profitMargin;
+                      const diff = mA - mB;
+                      const dir = diffLabel(mA, mB);
+                      return (
+                        <tr className="border-b border-surface-variant">
+                          <td className="py-3 pr-2 font-body-md text-on-surface">อัตรากำไร</td>
+                          <td className="py-3 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums">
+                            {noDataA ? <span className="text-on-surface-variant text-xs">ไม่มีข้อมูล</span> : `${mA.toFixed(1)}%`}
+                          </td>
+                          <td className="py-3 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums">
+                            {noDataB ? <span className="text-on-surface-variant text-xs">ไม่มีข้อมูล</span> : `${mB.toFixed(1)}%`}
+                          </td>
+                          <td className={`py-3 px-1 text-right font-price-table text-price-table tabular-nums ${dir === "same" ? "text-on-surface-variant" : dir === "up" ? "text-primary" : "text-error"}`}>
+                            {dir === "same" ? "—" : `${diff > 0 ? "+" : ""}${diff.toFixed(1)}%`}
+                          </td>
+                          <td className="py-3 pl-1 text-right font-label-caps text-label-caps text-on-surface-variant">—</td>
+                        </tr>
+                      );
+                    })()}
+
+                    {/* ── Breakdown รายรับ header ── */}
+                    <tr className="bg-surface-container-low">
+                      <td colSpan={5} className="py-2 pr-2 font-label-caps text-label-caps text-on-surface-variant pl-1">
+                        Breakdown รายรับ
+                      </td>
+                    </tr>
+                    {["ยอดขายอาหาร", "ยอดขายเครื่องดื่ม", "เดลิเวอรี", "จัดเลี้ยง", "อื่นๆ"]
+                      .map((cat) => ({ cat, a: incomeBreakA[cat] ?? 0, b: incomeBreakB[cat] ?? 0 }))
+                      .filter(({ a, b }) => a > 0 || b > 0)
+                      .map(({ cat, a, b }) => {
+                        const dir = diffLabel(a, b);
+                        return (
+                          <tr key={cat} className="border-b border-surface-variant last:border-0">
+                            <td className="py-2.5 pr-2 pl-3 font-body-md text-on-surface text-sm">{cat}</td>
+                            <td className="py-2.5 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums text-sm">
+                              {a > 0 ? `฿${formatMoney(a)}` : "—"}
+                            </td>
+                            <td className="py-2.5 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums text-sm">
+                              {b > 0 ? `฿${formatMoney(b)}` : "—"}
+                            </td>
+                            <td className="py-2.5 px-1 text-right font-price-table text-price-table tabular-nums text-sm text-on-surface-variant">—</td>
+                            <td className={`py-2.5 pl-1 text-right font-label-caps text-label-caps ${dir === "same" ? "text-on-surface-variant" : dir === "up" ? "text-primary" : "text-error"}`}>
+                              {dir === "up" ? "▲" : dir === "down" ? "▼" : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                    {/* ── Breakdown รายจ่าย header ── */}
+                    <tr className="bg-surface-container-low">
+                      <td colSpan={5} className="py-2 pr-2 font-label-caps text-label-caps text-on-surface-variant pl-1">
+                        Breakdown รายจ่าย
+                      </td>
+                    </tr>
+                    {["วัตถุดิบ", "ค่าแรง", "ค่าเช่า", "ค่าน้ำค่าไฟ", "การตลาด", "บรรจุภัณฑ์", "อื่นๆ"]
+                      .map((cat) => ({
+                        cat,
+                        a: compareA.expenseBreakdown.find((e) => e.category === cat)?.amount ?? 0,
+                        b: compareB.expenseBreakdown.find((e) => e.category === cat)?.amount ?? 0,
+                      }))
+                      .filter(({ a, b }) => a > 0 || b > 0)
+                      .map(({ cat, a, b }) => {
+                        const dir = diffLabel(a, b);
+                        const isGood = dir === "down";
+                        return (
+                          <tr key={cat} className="border-b border-surface-variant last:border-0">
+                            <td className="py-2.5 pr-2 pl-3 font-body-md text-on-surface text-sm">{cat}</td>
+                            <td className="py-2.5 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums text-sm">
+                              {a > 0 ? `฿${formatMoney(a)}` : "—"}
+                            </td>
+                            <td className="py-2.5 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums text-sm">
+                              {b > 0 ? `฿${formatMoney(b)}` : "—"}
+                            </td>
+                            <td className="py-2.5 px-1 text-right font-price-table text-price-table tabular-nums text-sm text-on-surface-variant">—</td>
+                            <td className={`py-2.5 pl-1 text-right font-label-caps text-label-caps ${dir === "same" ? "text-on-surface-variant" : isGood ? "text-primary" : "text-error"}`}>
+                              {dir === "up" ? "▲" : dir === "down" ? "▼" : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ── Metric cards ───────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
