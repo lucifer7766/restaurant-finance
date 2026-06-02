@@ -11,6 +11,7 @@ import { ReceiptScanModal, type ScanResult } from "@/components/expense/ReceiptS
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import { RecurringExpensePanel } from "@/components/expense/RecurringExpensePanel";
 import { PinGate } from "@/components/ui/PinGate";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { RecurringTemplate } from "@/lib/recurring";
 
 const EXPENSE_CATEGORY_META: Record<string, { icon: string; iconColor: string; bg: string }> = {
@@ -53,6 +54,8 @@ export function ExpenseContent() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [editingTx, setEditingTx] = useState<Parameters<typeof EditTransactionModal>[0]["transaction"]>(null);
   const [pinTarget, setPinTarget] = useState<(() => void) | null>(null);
+  const [deletingTxId, setDeletingTxId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function withPin(action: () => void) {
@@ -418,42 +421,38 @@ export function ExpenseContent() {
               {pagedExpenses.map((tx) => {
                 const meta = getCategoryMeta(tx.category || "");
                 return (
-                  <div key={tx.id} className="overflow-x-auto scrollbar-none hover:bg-surface-container-low transition-colors">
-                    <div className="flex items-center">
-                      <div className="grid grid-cols-[52px_1fr_auto] gap-x-3 items-center px-4 py-4 w-full shrink-0">
-                        <p className="font-label-caps text-label-caps text-on-surface leading-tight">
-                          {formatTransactionDate(tx.date)}
-                        </p>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
-                            <span className={`material-symbols-outlined text-[14px] ${meta.iconColor}`}>{meta.icon}</span>
-                          </div>
-                          <span className="font-body-md text-on-surface text-sm leading-tight truncate">
-                            {tx.description || getCategoryLabel(tx.category)}
-                          </span>
+                  /* BUG-003: ลบ overflow-x-auto ออก — ปุ่มเห็นได้ตลอด */
+                  <div key={tx.id} className="flex items-center hover:bg-surface-container-low transition-colors">
+                    <div className="grid grid-cols-[52px_1fr_auto] gap-x-3 items-center px-4 py-4 flex-1 min-w-0">
+                      <p className="font-label-caps text-label-caps text-on-surface leading-tight">
+                        {formatTransactionDate(tx.date)}
+                      </p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
+                          <span className={`material-symbols-outlined text-[14px] ${meta.iconColor}`}>{meta.icon}</span>
                         </div>
-                        <p className="font-semibold text-sm text-error whitespace-nowrap text-right">
-                          -฿{tx.amount.toLocaleString("th-TH")}
-                        </p>
+                        <span className="font-body-md text-on-surface text-sm leading-tight truncate">
+                          {tx.description || getCategoryLabel(tx.category)}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1 px-3 border-l border-surface-container-low shrink-0">
-                        <button
-                          onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
-                          className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">edit</span>
-                        </button>
-                        <button
-                          onClick={() => withPin(async () => {
-                            if (!window.confirm("ลบรายการนี้?")) return;
-                            try { await deleteTransaction(tx.id); }
-                            catch (e) { alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ"); }
-                          })}
-                          className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
-                      </div>
+                      <p className="font-semibold text-sm text-error whitespace-nowrap text-right">
+                        -฿{tx.amount.toLocaleString("th-TH")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 px-3 border-l border-surface-container-low shrink-0">
+                      <button
+                        onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
+                        className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                      </button>
+                      {/* BUG-005: ใช้ in-app modal แทน window.confirm (ผ่าน PinGate ก่อน) */}
+                      <button
+                        onClick={() => withPin(() => setDeletingTxId(tx.id))}
+                        className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
                     </div>
                   </div>
                 );
@@ -509,8 +508,34 @@ export function ExpenseContent() {
         initialData={scanResult}
       />
 
+      {/* BUG-005: in-app delete confirmation */}
+      <ConfirmModal
+        open={!!deletingTxId}
+        title="ลบรายจ่าย"
+        message="ยืนยันการลบรายการนี้? การกระทำนี้ไม่สามารถย้อนกลับได้"
+        confirmLabel="ลบ"
+        loading={deleteLoading}
+        onCancel={() => setDeletingTxId(null)}
+        onConfirm={async () => {
+          if (!deletingTxId) return;
+          setDeleteLoading(true);
+          try {
+            await deleteTransaction(deletingTxId);
+            await refreshTransactions();
+          } catch (e) {
+            window.alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
+          } finally {
+            setDeleteLoading(false);
+            setDeletingTxId(null);
+          }
+        }}
+      />
+
       {pinTarget && (
         <PinGate
+          forcePrompt
+          title="ยืนยันการลบ"
+          subtitle="ใส่ PIN เพื่อยืนยัน — ลบแล้วไม่สามารถกู้คืนได้"
           onUnlock={() => { pinTarget(); setPinTarget(null); }}
           onCancel={() => setPinTarget(null)}
         />

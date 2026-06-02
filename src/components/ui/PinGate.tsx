@@ -6,22 +6,23 @@ import { verifyPin, isSessionActive, isPinEnabled, refreshSession } from "@/lib/
 type Props = {
   onUnlock: () => void;
   onCancel: () => void;
+  /** true = ถามทุกครั้งไม่ข้าม session (ใช้กับ action ทำลาย เช่น ลบ) */
+  forcePrompt?: boolean;
+  title?: string;
+  subtitle?: string;
 };
 
-export function PinGate({ onUnlock, onCancel }: Props) {
+export function PinGate({ onUnlock, onCancel, forcePrompt = false, title = "ยืนยันตัวตน", subtitle = "ใส่ PIN ผู้จัดการ" }: Props) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // ถ้า session ยังใช้งานได้อยู่ → ข้ามได้เลย
-    if (!isPinEnabled() || isSessionActive()) {
-      refreshSession();
-      onUnlock();
-      return;
-    }
+    // ข้าม session ได้เฉพาะเมื่อ forcePrompt=false
+    if (!isPinEnabled()) { onUnlock(); return; }
+    if (!forcePrompt && isSessionActive()) { refreshSession(); onUnlock(); return; }
     inputRef.current?.focus();
-  }, [onUnlock]);
+  }, [onUnlock, forcePrompt]);
 
   function handleSubmit() {
     if (verifyPin(pin)) {
@@ -33,18 +34,19 @@ export function PinGate({ onUnlock, onCancel }: Props) {
     }
   }
 
-  if (!isPinEnabled() || isSessionActive()) return null;
+  if (!isPinEnabled()) return null;
+  if (!forcePrompt && isSessionActive()) return null;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-surface w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
         <div className="p-6 border-b border-surface-variant flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center">
-            <span className="material-symbols-outlined text-on-primary-container text-[20px]">lock</span>
+          <div className="w-10 h-10 bg-error-container rounded-xl flex items-center justify-center">
+            <span className="material-symbols-outlined text-error text-[20px]">lock</span>
           </div>
           <div>
-            <h3 className="font-headline-md text-headline-md text-on-surface">ยืนยันตัวตน</h3>
-            <p className="font-label-caps text-label-caps text-on-surface-variant">ใส่ PIN ผู้จัดการ</p>
+            <h3 className="font-headline-md text-headline-md text-on-surface">{title}</h3>
+            <p className="font-label-caps text-label-caps text-on-surface-variant">{subtitle}</p>
           </div>
         </div>
         <div className="p-6 space-y-4">
