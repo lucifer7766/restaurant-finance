@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import {
@@ -8,6 +8,8 @@ import {
   filterTransactionsByMonth,
 } from "@/lib/data";
 import { formatMonthLabel, formatCompactNumber } from "@/lib/utils";
+import { loadBudgets, type BudgetMap } from "@/lib/budget";
+import { BudgetModal } from "./BudgetModal";
 
 function formatMoney(n: number) {
   return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -38,6 +40,12 @@ const CATEGORY_COLORS = [
 export function CostAnalysisContent() {
   const { transactions, isLoading, error: loadError } = useTransactions();
   const { selectedMonth } = useMonthFilter();
+  const [budgetOpen, setBudgetOpen] = useState(false);
+  const [budgets, setBudgets] = useState<BudgetMap>({});
+
+  useEffect(() => {
+    setBudgets(loadBudgets());
+  }, [budgetOpen]);
 
   const last6Months = useMemo(() => getPrevMonths(selectedMonth, 6), [selectedMonth]);
 
@@ -115,13 +123,22 @@ export function CostAnalysisContent() {
       )}
 
       {/* ── Header ─────────────────────────────────────────── */}
-      <div>
-        <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-0.5">
-          วิเคราะห์ต้นทุน
-        </h2>
-        <p className="font-label-caps text-label-caps text-on-surface-variant">
-          สรุปข้อมูลค่าใช้จ่ายและข้อเสนอแนะประจำเดือน {formatMonthLabel(selectedMonth)}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-0.5">
+            วิเคราะห์ต้นทุน
+          </h2>
+          <p className="font-label-caps text-label-caps text-on-surface-variant">
+            สรุปข้อมูลค่าใช้จ่ายและข้อเสนอแนะประจำเดือน {formatMonthLabel(selectedMonth)}
+          </p>
+        </div>
+        <button
+          onClick={() => setBudgetOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary-container text-on-primary-container rounded-xl font-body-md hover:opacity-90 transition-all shrink-0"
+        >
+          <span className="material-symbols-outlined text-[18px]">savings</span>
+          ตั้งงบ
+        </button>
       </div>
 
       {/* ── Insight alert cards ────────────────────────────── */}
@@ -291,6 +308,62 @@ export function CostAnalysisContent() {
         </div>
       )}
 
+      {/* ── Budget vs Actual ───────────────────────────────── */}
+      {currentReport.expenseBreakdown.length > 0 && Object.keys(budgets).length > 0 && (
+        <div className="metric-card p-7 rounded-2xl">
+          <h3 className="font-headline-md text-headline-md text-on-surface mb-1">งบประมาณ vs จริง</h3>
+          <p className="font-label-caps text-label-caps text-on-surface-variant mb-5">เดือน{formatMonthLabel(selectedMonth)}</p>
+          <div className="space-y-5">
+            {currentReport.expenseBreakdown
+              .filter(({ category }) => (budgets[category] ?? 0) > 0)
+              .map(({ category, amount }) => {
+                const budget = budgets[category] ?? 0;
+                const pct = budget > 0 ? Math.min((amount / budget) * 100, 100) : 0;
+                const over = amount > budget;
+                const overAmt = amount - budget;
+                return (
+                  <div key={category}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-body-md text-on-surface">{category}</span>
+                      <div className="text-right">
+                        <span className={`font-price-table text-price-table ${over ? "text-error" : "text-on-surface"}`}>
+                          ฿{formatMoney(amount)}
+                        </span>
+                        <span className="font-label-caps text-label-caps text-on-surface-variant ml-1">
+                          / ฿{formatMoney(budget)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-2.5 bg-surface-container-highest rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${over ? "bg-error" : "bg-primary"}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    {over && (
+                      <p className="font-label-caps text-label-caps text-error mt-1">
+                        เกินงบ ฿{formatMoney(overAmt)}
+                      </p>
+                    )}
+                    {!over && (
+                      <p className="font-label-caps text-label-caps text-on-surface-variant mt-1">
+                        ใช้ไป {pct.toFixed(0)}% · คงเหลือ ฿{formatMoney(budget - amount)}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+          <button
+            onClick={() => setBudgetOpen(true)}
+            className="mt-5 font-label-caps text-label-caps text-primary flex items-center gap-1 hover:underline"
+          >
+            <span className="material-symbols-outlined text-[14px]">edit</span>
+            แก้ไขงบประมาณ
+          </button>
+        </div>
+      )}
+
       {/* ── Recommendation box ─────────────────────────────── */}
       {topCat && (
         <div className="sand-card-light p-6 rounded-2xl flex items-start gap-4">
@@ -311,6 +384,13 @@ export function CostAnalysisContent() {
             )}
           </div>
         </div>
+      )}
+
+      {budgetOpen && (
+        <BudgetModal
+          categories={currentReport.expenseBreakdown.map((e) => e.category)}
+          onClose={() => setBudgetOpen(false)}
+        />
       )}
 
     </div>
