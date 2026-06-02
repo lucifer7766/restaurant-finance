@@ -406,7 +406,7 @@ function TrendLineChart({
   chartData: Array<{ month: string; byCategory: Record<string, number>; total: number }>;
   topCategories: string[];
 }) {
-  const CHART_H = 180;
+  const CHART_H = 280;
   const PAD = { top: 16, right: 16, bottom: 36, left: 52 };
   const innerH = CHART_H - PAD.top - PAD.bottom;
   const innerW = 320;
@@ -493,7 +493,7 @@ function SixMonthGroupedChart({
   const maxVal = Math.max(...allValues, 1);
   const paddedMax = Math.ceil(maxVal / 10000) * 10000 || 10000;
 
-  const CHART_H = 200;
+  const CHART_H = 280;
   const PAD = { top: 16, right: 10, bottom: 36, left: 52 };
   const innerH = CHART_H - PAD.top - PAD.bottom;
   const innerW = 320;
