@@ -111,7 +111,7 @@ export function IncomeContent() {
       if (!batchId) continue;
       const isLegacy = batchId === LEGACY_BATCH_ID;
       const ts = isLegacy ? 0 : parseInt(batchId.replace(POS_PREFIX, ""), 10);
-      const importedAt = isNaN(ts) || ts === 0 ? new Date(0) : new Date(ts);
+      const importedAt = isNaN(ts) || ts === 0 ? new Date(t.date) : new Date(ts);
       const existing = map.get(batchId);
       const tx = { id: t.id, date: t.date, category: t.category, amount: t.amount, description: t.description };
       const pay = parsePayment(t.description || "");
