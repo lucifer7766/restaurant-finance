@@ -1,3 +1,5 @@
+import { getCategoryLabel } from "@/lib/utils";
+
 export type RevenuePoint = {
   month: string;
   revenue: number;
@@ -105,8 +107,8 @@ export function getMonthlyReportFromTransactions(
       totalIncome += transaction.amount;
     } else {
       totalExpenses += transaction.amount;
-      expenseByCategory[transaction.category] =
-        (expenseByCategory[transaction.category] ?? 0) + transaction.amount;
+      const cat = getCategoryLabel(transaction.category);
+      expenseByCategory[cat] = (expenseByCategory[cat] ?? 0) + transaction.amount;
     }
   }
 

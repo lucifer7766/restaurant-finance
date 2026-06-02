@@ -43,10 +43,23 @@ function getIncomeBreakdown(transactions: RecentTransaction[], monthKey: string)
   const map: Record<string, number> = {};
   for (const t of transactions) {
     if (t.type === "income" && t.date?.startsWith(monthKey)) {
-      map[t.category] = (map[t.category] ?? 0) + t.amount;
+      const cat = getCategoryLabel(t.category);
+      map[cat] = (map[cat] ?? 0) + t.amount;
     }
   }
   return map;
+}
+
+function trendDisplay(
+  current: number,
+  prev: number,
+  hasPrev: boolean,
+): { noData: boolean; up: boolean; text: string } {
+  if (!hasPrev || prev === 0) return { noData: true, up: false, text: "ไม่มีข้อมูลเดือนก่อน" };
+  const pct = ((current - prev) / Math.abs(prev)) * 100;
+  if (!isFinite(pct) || isNaN(pct)) return { noData: true, up: false, text: "ไม่มีข้อมูลเดือนก่อน" };
+  const up = pct > 0;
+  return { noData: false, up, text: `${up ? "+" : ""}${pct.toFixed(1)}% เทียบเดือนก่อน` };
 }
 
 /* ─── ReportsContent ─────────────────────────────────────────────────────── */
@@ -108,6 +121,11 @@ export function ReportsContent() {
   const incomeBreakA = useMemo(() => getIncomeBreakdown(transactions, monthA), [transactions, monthA]);
   const incomeBreakB = useMemo(() => getIncomeBreakdown(transactions, monthB), [transactions, monthB]);
 
+  const incomeBreak = useMemo(() => getIncomeBreakdown(transactions, selectedMonth), [transactions, selectedMonth]);
+  const prevIncomeBreak = useMemo(() => getIncomeBreakdown(transactions, getPrevMonthKey(selectedMonth)), [transactions, selectedMonth]);
+
+  const hasPrevData = prevReport.totalIncome > 0 || prevReport.totalExpenses > 0;
+
   const noDataA = compareA.totalIncome === 0 && compareA.totalExpenses === 0;
   const noDataB = compareB.totalIncome === 0 && compareB.totalExpenses === 0;
 
@@ -118,10 +136,10 @@ export function ReportsContent() {
     margin: report.profitMargin,
   }), [report]);
 
-  const growthIncome =
-    prevReport.totalIncome > 0
-      ? ((income - prevReport.totalIncome) / prevReport.totalIncome) * 100
-      : 0;
+  const growthIncome  = trendDisplay(income,  prevReport.totalIncome,  hasPrevData);
+  const growthExpense = trendDisplay(expense, prevReport.totalExpenses, hasPrevData);
+  const growthProfit  = trendDisplay(profit,  prevReport.netProfit,    hasPrevData);
+  const growthMargin  = trendDisplay(margin,  prevReport.profitMargin, hasPrevData);
 
   const aiSummary = useMemo(() => {
     const topExpense = report.expenseBreakdown[0];
@@ -243,9 +261,9 @@ export function ReportsContent() {
         </h2>
         <p className="font-body-md text-on-surface-variant">
           สรุปผลประกอบการประจำเดือน {formatMonthLabel(selectedMonth)}
-          {growthIncome !== 0 && (
-            <span className={`ml-2 font-semibold text-sm ${growthIncome > 0 ? "text-primary" : "text-error"}`}>
-              {growthIncome > 0 ? "+" : ""}{growthIncome.toFixed(1)}% จากเดือนที่แล้ว
+          {!growthIncome.noData && (
+            <span className={`ml-2 font-semibold text-sm ${growthIncome.up ? "text-primary" : "text-error"}`}>
+              {growthIncome.text.replace(" เทียบเดือนก่อน", "")} จากเดือนที่แล้ว
             </span>
           )}
         </p>
@@ -404,6 +422,7 @@ export function ReportsContent() {
                       .map((cat) => ({ cat, a: incomeBreakA[cat] ?? 0, b: incomeBreakB[cat] ?? 0 }))
                       .filter(({ a, b }) => a > 0 || b > 0)
                       .map(({ cat, a, b }) => {
+                        const diff = a - b;
                         const dir = diffLabel(a, b);
                         return (
                           <tr key={cat} className="border-b border-surface-variant last:border-0">
@@ -414,9 +433,11 @@ export function ReportsContent() {
                             <td className="py-2.5 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums text-sm">
                               {b > 0 ? `฿${formatMoney(b)}` : "—"}
                             </td>
-                            <td className="py-2.5 px-1 text-right font-price-table text-price-table tabular-nums text-sm text-on-surface-variant">—</td>
+                            <td className={`py-2.5 px-1 text-right font-price-table text-price-table tabular-nums text-sm ${dir === "same" ? "text-on-surface-variant" : dir === "up" ? "text-primary" : "text-error"}`}>
+                              {dir === "same" ? "—" : `${diff > 0 ? "+" : "-"}฿${formatMoney(Math.abs(diff))}`}
+                            </td>
                             <td className={`py-2.5 pl-1 text-right font-label-caps text-label-caps ${dir === "same" ? "text-on-surface-variant" : dir === "up" ? "text-primary" : "text-error"}`}>
-                              {dir === "up" ? "▲" : dir === "down" ? "▼" : "—"}
+                              {dir === "up" ? "▲ " : dir === "down" ? "▼ " : ""}{safePct(a, b)}
                             </td>
                           </tr>
                         );
@@ -436,6 +457,7 @@ export function ReportsContent() {
                       }))
                       .filter(({ a, b }) => a > 0 || b > 0)
                       .map(({ cat, a, b }) => {
+                        const diff = a - b;
                         const dir = diffLabel(a, b);
                         const isGood = dir === "down";
                         return (
@@ -447,9 +469,11 @@ export function ReportsContent() {
                             <td className="py-2.5 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums text-sm">
                               {b > 0 ? `฿${formatMoney(b)}` : "—"}
                             </td>
-                            <td className="py-2.5 px-1 text-right font-price-table text-price-table tabular-nums text-sm text-on-surface-variant">—</td>
+                            <td className={`py-2.5 px-1 text-right font-price-table text-price-table tabular-nums text-sm ${dir === "same" ? "text-on-surface-variant" : isGood ? "text-primary" : "text-error"}`}>
+                              {dir === "same" ? "—" : `${diff > 0 ? "+" : "-"}฿${formatMoney(Math.abs(diff))}`}
+                            </td>
                             <td className={`py-2.5 pl-1 text-right font-label-caps text-label-caps ${dir === "same" ? "text-on-surface-variant" : isGood ? "text-primary" : "text-error"}`}>
-                              {dir === "up" ? "▲" : dir === "down" ? "▼" : "—"}
+                              {dir === "up" ? "▲ " : dir === "down" ? "▼ " : ""}{safePct(a, b)}
                             </td>
                           </tr>
                         );
@@ -474,14 +498,14 @@ export function ReportsContent() {
               {formatMoney(income)}
             </span>
           </div>
-          {growthIncome !== 0 && (
-            <div className={`mt-3 flex items-center gap-1.5 ${growthIncome > 0 ? "text-primary" : "text-error"}`}>
+          {growthIncome.noData ? (
+            <p className="mt-3 font-label-caps text-label-caps text-on-surface-variant">ไม่มีข้อมูลเดือนก่อน</p>
+          ) : (
+            <div className={`mt-3 flex items-center gap-1.5 ${growthIncome.up ? "text-primary" : "text-error"}`}>
               <span className="material-symbols-outlined text-[16px]">
-                {growthIncome > 0 ? "trending_up" : "trending_down"}
+                {growthIncome.up ? "trending_up" : "trending_down"}
               </span>
-              <span className="font-label-caps text-label-caps">
-                {growthIncome > 0 ? "+" : ""}{growthIncome.toFixed(1)}% จากเดือนที่แล้ว
-              </span>
+              <span className="font-label-caps text-label-caps">{growthIncome.text}</span>
             </div>
           )}
         </div>
@@ -495,6 +519,16 @@ export function ReportsContent() {
               {formatMoney(expense)}
             </span>
           </div>
+          {growthExpense.noData ? (
+            <p className="mt-3 font-label-caps text-label-caps text-on-surface-variant">ไม่มีข้อมูลเดือนก่อน</p>
+          ) : (
+            <div className={`mt-3 flex items-center gap-1.5 ${growthExpense.up ? "text-error" : "text-primary"}`}>
+              <span className="material-symbols-outlined text-[16px]">
+                {growthExpense.up ? "trending_up" : "trending_down"}
+              </span>
+              <span className="font-label-caps text-label-caps">{growthExpense.text}</span>
+            </div>
+          )}
         </div>
 
         {/* กำไรสุทธิ — HERO CARD (dark green) */}
@@ -516,6 +550,21 @@ export function ReportsContent() {
               {profit >= 0 ? `อัตรากำไร ${margin.toFixed(1)}%` : "ขาดทุน"}
             </span>
           </div>
+          {growthProfit.noData ? (
+            <p className="mt-2 font-label-caps text-label-caps opacity-60" style={{ color: profit >= 0 ? "#bbf7d0" : undefined }}>ไม่มีข้อมูลเดือนก่อน</p>
+          ) : (
+            <div className={`mt-2 flex items-center gap-1.5 ${growthProfit.up ? "text-green-200" : "text-red-300"}`}>
+              <span className="material-symbols-outlined text-[14px]">
+                {growthProfit.up ? "trending_up" : "trending_down"}
+              </span>
+              <span className="font-label-caps text-label-caps text-xs">{growthProfit.text}</span>
+            </div>
+          )}
+          {!growthMargin.noData && (
+            <div className={`mt-1 flex items-center gap-1 ${growthMargin.up ? "text-green-200" : "text-red-300"}`}>
+              <span className="font-label-caps text-xs opacity-80">อัตรากำไร {growthMargin.text}</span>
+            </div>
+          )}
         </div>
 
       </div>
@@ -558,6 +607,62 @@ export function ReportsContent() {
         </div>
       </div>
 
+      {/* ── รายรับแยกตามหมวดหมู่ ───────────────────────────── */}
+      {Object.keys(incomeBreak).length > 0 && (
+        <div className="metric-card rounded-2xl overflow-hidden">
+          <div className="p-7 pb-0">
+            <h3 className="font-headline-md text-headline-md text-on-surface">รายรับแยกตามหมวดหมู่</h3>
+          </div>
+          <div className="mt-6 overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-surface-variant text-left">
+                  <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant">หมวดหมู่</th>
+                  <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">สัดส่วน</th>
+                  <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">จำนวนเงิน</th>
+                  <th className="px-4 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">%</th>
+                  <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">เดือนก่อน</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(incomeBreak)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([category, amount]) => {
+                    const pct = income > 0 ? (amount / income) * 100 : 0;
+                    const prevAmt = prevIncomeBreak[category] ?? 0;
+                    const tr = trendDisplay(amount, prevAmt, hasPrevData);
+                    return (
+                      <tr key={category} className="border-b border-surface-variant last:border-0 hover:bg-surface-container-low transition-colors">
+                        <td className="px-8 py-4 font-body-md text-on-surface">{getCategoryLabel(category)}</td>
+                        <td className="px-6 py-4 min-w-[120px]">
+                          <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+                            <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </td>
+                        <td className="px-8 py-4 text-right font-price-table text-price-table text-on-surface">
+                          ฿{formatMoney(amount)}
+                        </td>
+                        <td className="px-4 py-4 text-right font-label-caps text-label-caps text-on-surface-variant">
+                          {pct.toFixed(1)}%
+                        </td>
+                        <td className="px-8 py-4 text-right font-label-caps text-label-caps">
+                          {tr.noData ? (
+                            <span className="text-on-surface-variant">—</span>
+                          ) : (
+                            <span className={tr.up ? "text-primary" : "text-error"}>
+                              {tr.up ? "▲" : "▼"} {tr.text.split("%")[0]}%
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* ── รายจ่ายแยกตามหมวดหมู่ ──────────────────────────── */}
       <div className="metric-card rounded-2xl overflow-hidden">
         <div className="p-7 pb-0 flex items-center justify-between">
@@ -593,16 +698,19 @@ export function ReportsContent() {
                   <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant">หมวดหมู่</th>
                   <th className="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">สัดส่วน</th>
                   <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">จำนวนเงิน</th>
-                  <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">%</th>
+                  <th className="px-4 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">%</th>
+                  <th className="px-8 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">เดือนก่อน</th>
                 </tr>
               </thead>
               <tbody>
                 {report.expenseBreakdown.map(({ category, amount }) => {
                   const pct = expense > 0 ? (amount / expense) * 100 : 0;
+                  const prevAmt = prevReport.expenseBreakdown.find((e) => e.category === category)?.amount ?? 0;
+                  const tr = trendDisplay(amount, prevAmt, hasPrevData);
                   return (
                     <tr key={category} className="border-b border-surface-variant last:border-0 hover:bg-surface-container-low transition-colors">
-                      <td className="px-8 py-4 font-body-md text-on-surface">{category}</td>
-                      <td className="px-6 py-4 min-w-[140px]">
+                      <td className="px-8 py-4 font-body-md text-on-surface">{getCategoryLabel(category)}</td>
+                      <td className="px-6 py-4 min-w-[120px]">
                         <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
                           <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
                         </div>
@@ -610,8 +718,17 @@ export function ReportsContent() {
                       <td className="px-8 py-4 text-right font-price-table text-price-table text-on-surface">
                         ฿{formatMoney(amount)}
                       </td>
-                      <td className="px-8 py-4 text-right font-label-caps text-label-caps text-on-surface-variant">
+                      <td className="px-4 py-4 text-right font-label-caps text-label-caps text-on-surface-variant">
                         {pct.toFixed(1)}%
+                      </td>
+                      <td className="px-8 py-4 text-right font-label-caps text-label-caps">
+                        {tr.noData ? (
+                          <span className="text-on-surface-variant">—</span>
+                        ) : (
+                          <span className={tr.up ? "text-error" : "text-primary"}>
+                            {tr.up ? "▲" : "▼"} {tr.text.split("%")[0]}%
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );
