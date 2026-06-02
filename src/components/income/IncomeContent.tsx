@@ -11,7 +11,7 @@ import { updateTransaction, deleteTransaction as deleteTransactionFromSupabase }
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useMonthFilter } from "@/context/MonthFilterContext";
-import { filterTransactionsByMonth } from "@/lib/data";
+import { filterTransactionsByMonth, getMonthlyReportFromTransactions } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote } from "@/lib/utils";
 
 function getPrevMonth(monthKey: string): string {
@@ -67,6 +67,18 @@ function parseBatchId(description: string): string | null {
   return null;
 }
 
+/* ── Compare helpers ──────────────────────────────────────────────────────── */
+function fmtMoneyI(n: number) { return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
+function prevMonthI(k: string) { const [y,m] = k.split("-").map(Number); return m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,"0")}`; }
+function safePctI(a: number, b: number): string { if (b===0||!isFinite(b)||!isFinite(a)) return "—"; const v=((a-b)/Math.abs(b))*100; if (!isFinite(v)||isNaN(v)) return "—"; return (v>0?"+":"")+v.toFixed(1)+"%"; }
+function diffDirI(a: number, b: number): "up"|"down"|"same" { return a>b?"up":a<b?"down":"same"; }
+function getIncomeBreakI(txns: {type:string;date:string;category:string;amount:number}[], monthKey: string) {
+  const map: Record<string,number> = {};
+  for (const t of txns) { if (t.type==="income"&&t.date?.startsWith(monthKey)) map[t.category]=(map[t.category]??0)+t.amount; }
+  return map;
+}
+const INCOME_CATS = ["ยอดขายอาหาร","ยอดขายเครื่องดื่ม","เดลิเวอรี","จัดเลี้ยง","อื่นๆ"];
+
 export function IncomeContent() {
   const { transactions, isLoading, error, addTransaction, deleteTransaction, refreshTransactions } = useTransactions();
   const [posModalOpen, setPosModalOpen] = useState(false);
@@ -74,6 +86,26 @@ export function IncomeContent() {
   const [editingBatch, setEditingBatch] = useState<ImportBatch | null>(null);
   const [deletingBatch, setDeletingBatch] = useState<ImportBatch | null>(null);
   const { selectedMonth } = useMonthFilter();
+
+  /* ── Compare state ── */
+  const [cmpOpen, setCmpOpen] = useState(false);
+  const availMonthsI = useMemo(() => {
+    const s = new Set<string>();
+    for (const t of transactions) { if (t.date?.length >= 7) s.add(t.date.slice(0,7)); }
+    return Array.from(s).sort((a,b) => b.localeCompare(a));
+  }, [transactions]);
+  const [mAI, setMAI] = useState<string>(() => selectedMonth);
+  const [mBI, setMBI] = useState<string>(() => prevMonthI(selectedMonth));
+  const rAI = useMemo(() => getMonthlyReportFromTransactions(transactions, mAI), [transactions, mAI]);
+  const rBI = useMemo(() => getMonthlyReportFromTransactions(transactions, mBI), [transactions, mBI]);
+  const incBreakA = useMemo(() => getIncomeBreakI(transactions, mAI), [transactions, mAI]);
+  const incBreakB = useMemo(() => getIncomeBreakI(transactions, mBI), [transactions, mBI]);
+  const noAI = rAI.totalIncome === 0 && rAI.totalExpenses === 0;
+  const noBI = rBI.totalIncome === 0 && rBI.totalExpenses === 0;
+  const dynIncomeCats = useMemo(() => {
+    const s = new Set<string>([...Object.keys(incBreakA), ...Object.keys(incBreakB)]);
+    return [...INCOME_CATS.filter(c=>s.has(c)), ...Array.from(s).filter(c=>!INCOME_CATS.includes(c))];
+  }, [incBreakA, incBreakB]);
 
   const searchParams = useSearchParams();
   const [showAll, setShowAll] = useState(false);
@@ -232,6 +264,98 @@ export function IncomeContent() {
           อัปโหลดรายงาน POS
         </button>
       </div>
+      {/* ── เปรียบเทียบเดือน ── */}
+      <div className="metric-card rounded-2xl overflow-hidden">
+        <button onClick={() => setCmpOpen(v => !v)} className="w-full p-6 flex items-center justify-between text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-on-primary-container text-[20px]">compare_arrows</span>
+            </div>
+            <div>
+              <h3 className="font-headline-md text-headline-md text-on-surface">เปรียบเทียบเดือน</h3>
+              <p className="font-label-caps text-label-caps text-on-surface-variant">เลือก 2 เดือนเพื่อดูส่วนต่าง</p>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-on-surface-variant">{cmpOpen ? "expand_less" : "expand_more"}</span>
+        </button>
+        {cmpOpen && (
+          <div className="px-6 pb-6 space-y-5">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">เดือน A</p>
+                <select value={mAI} onChange={e => setMAI(e.target.value)} className="w-full bg-surface-container rounded-xl px-3 py-2.5 font-body-md text-on-surface border border-outline-variant focus:outline-none focus:border-primary text-sm">
+                  {availMonthsI.map(m => <option key={m} value={m}>{formatMonthLabel(m)}</option>)}
+                </select>
+              </div>
+              <button onClick={() => { setMAI(mBI); setMBI(mAI); }} className="w-9 h-9 mb-0.5 rounded-xl border border-outline-variant flex items-center justify-center hover:bg-surface-container transition-all shrink-0" title="สลับเดือน">
+                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">swap_horiz</span>
+              </button>
+              <div className="flex-1">
+                <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">เดือน B</p>
+                <select value={mBI} onChange={e => setMBI(e.target.value)} className="w-full bg-surface-container rounded-xl px-3 py-2.5 font-body-md text-on-surface border border-outline-variant focus:outline-none focus:border-primary text-sm">
+                  {availMonthsI.map(m => <option key={m} value={m}>{formatMonthLabel(m)}</option>)}
+                </select>
+              </div>
+            </div>
+            {noAI && noBI ? (
+              <p className="text-center font-body-md text-on-surface-variant py-6">ไม่มีข้อมูลเปรียบเทียบ</p>
+            ) : (
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full table-fixed text-sm min-w-[480px]">
+                  <colgroup>
+                    <col className="w-[30%]" /><col className="w-[17%]" /><col className="w-[17%]" /><col className="w-[20%]" /><col className="w-[16%]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b-2 border-surface-variant">
+                      <th className="py-2.5 pr-2 text-left font-label-caps text-label-caps text-on-surface-variant">รายการ</th>
+                      <th className="py-2.5 px-1 text-right font-label-caps text-label-caps text-on-surface-variant">{noAI ? "—" : formatMonthLabel(mAI)}</th>
+                      <th className="py-2.5 px-1 text-right font-label-caps text-label-caps text-on-surface-variant">{noBI ? "—" : formatMonthLabel(mBI)}</th>
+                      <th className="py-2.5 px-1 text-right font-label-caps text-label-caps text-on-surface-variant">ส่วนต่าง</th>
+                      <th className="py-2.5 pl-1 text-right font-label-caps text-label-caps text-on-surface-variant">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* รายรับรวม */}
+                    {(() => {
+                      const a = rAI.totalIncome, b = rBI.totalIncome;
+                      const diff = a - b; const dir = diffDirI(a,b); const isGood = dir==="up";
+                      return (
+                        <tr className="border-b border-surface-variant">
+                          <td className="py-3 pr-2 font-body-md text-on-surface font-semibold">รายรับรวม</td>
+                          <td className="py-3 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums">{noAI ? <span className="text-on-surface-variant text-xs">ไม่มีข้อมูล</span> : `฿${fmtMoneyI(a)}`}</td>
+                          <td className="py-3 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums">{noBI ? <span className="text-on-surface-variant text-xs">ไม่มีข้อมูล</span> : `฿${fmtMoneyI(b)}`}</td>
+                          <td className={`py-3 px-1 text-right font-price-table text-price-table tabular-nums ${dir==="same"?"text-on-surface-variant":isGood?"text-primary":"text-error"}`}>{dir==="same"?"—":`${diff>0?"+":"-"}฿${fmtMoneyI(Math.abs(diff))}`}</td>
+                          <td className={`py-3 pl-1 text-right font-label-caps text-label-caps ${dir==="same"?"text-on-surface-variant":isGood?"text-primary":"text-error"}`}>{dir==="up"?"▲ ":dir==="down"?"▼ ":""}{safePctI(a,b)}</td>
+                        </tr>
+                      );
+                    })()}
+                    {/* Breakdown header */}
+                    <tr className="bg-surface-container-low">
+                      <td colSpan={5} className="py-2 pl-1 font-label-caps text-label-caps text-on-surface-variant">Breakdown รายรับ</td>
+                    </tr>
+                    {dynIncomeCats
+                      .map(cat => ({ cat, a: incBreakA[cat]??0, b: incBreakB[cat]??0 }))
+                      .filter(({a,b}) => a>0||b>0)
+                      .map(({cat,a,b}) => {
+                        const dir = diffDirI(a,b); const isGood = dir==="up";
+                        return (
+                          <tr key={cat} className="border-b border-surface-variant last:border-0">
+                            <td className="py-2.5 pr-2 pl-3 font-body-md text-on-surface text-sm">{cat}</td>
+                            <td className="py-2.5 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums text-sm">{a>0?`฿${fmtMoneyI(a)}`:"—"}</td>
+                            <td className="py-2.5 px-1 text-right font-price-table text-price-table text-on-surface tabular-nums text-sm">{b>0?`฿${fmtMoneyI(b)}`:"—"}</td>
+                            <td className={`py-2.5 px-1 text-right font-price-table text-price-table tabular-nums text-sm ${dir==="same"?"text-on-surface-variant":isGood?"text-primary":"text-error"}`}>{dir==="same"?"—":`${(a-b)>0?"+":"-"}฿${fmtMoneyI(Math.abs(a-b))}`}</td>
+                            <td className={`py-2.5 pl-1 text-right font-label-caps text-label-caps ${dir==="same"?"text-on-surface-variant":isGood?"text-primary":"text-error"}`}>{dir==="up"?"▲":dir==="down"?"▼":"—"}</td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {importBatches.length > 0 && (
         <button
           onClick={() => setHistoryOpen(true)}
