@@ -5,6 +5,7 @@ import { RevenueChart } from "@/components/charts/RevenueChart";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import {
   filterTransactionsByMonth,
   getMonthlyReportFromTransactions,
@@ -21,6 +22,8 @@ export function DashboardContent() {
   const [editingTx, setEditingTx] = useState<Parameters<typeof EditTransactionModal>[0]["transaction"]>(null);
   const [showCompare, setShowCompare] = useState(false);
   const [compareMonth, setCompareMonth] = useState("");
+  const [deletingTxId, setDeletingTxId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const monthLabel = formatMonthLabel(selectedMonth);
 
@@ -69,11 +72,12 @@ export function DashboardContent() {
     ? ((report.totalExpenses - prevReport.totalExpenses) / prevReport.totalExpenses) * 100
     : 0;
 
-  /* cumulative net across ALL time = approximate cash position */
-  const cumulativeNet = useMemo(
-    () => transactions.reduce((s, t) => t.type === "income" ? s + t.amount : s - t.amount, 0),
-    [transactions]
-  );
+  /* cumulative net สะสมถึงสิ้นเดือนที่เลือก (BUG-008) */
+  const cumulativeNet = useMemo(() => {
+    return transactions
+      .filter((t) => t.date.slice(0, 7) <= selectedMonth)
+      .reduce((s, t) => (t.type === "income" ? s + t.amount : s - t.amount), 0);
+  }, [transactions, selectedMonth]);
 
   /* alert banner */
   const alert = useMemo(() => {
@@ -103,7 +107,11 @@ export function DashboardContent() {
   }
 
   const compareMonthOptions = availableMonths.filter((m) => m !== selectedMonth);
-  const effectiveCompareMonth = compareMonth && compareMonth !== selectedMonth ? compareMonth : (compareMonthOptions[compareMonthOptions.length - 1] ?? "");
+  // Default เป็น previous month ถ้ามีใน list; ไม่งั้นใช้เดือนล่าสุดที่มีข้อมูล
+  const defaultCompareMonth = compareMonthOptions.includes(previousMonthKey)
+    ? previousMonthKey
+    : (compareMonthOptions[compareMonthOptions.length - 1] ?? "");
+  const effectiveCompareMonth = compareMonth && compareMonth !== selectedMonth ? compareMonth : defaultCompareMonth;
   const compareReport = useMemo(
     () => effectiveCompareMonth ? getMonthlyReportFromTransactions(transactions, effectiveCompareMonth) : null,
     [transactions, effectiveCompareMonth]
@@ -385,45 +393,42 @@ export function DashboardContent() {
               : selectedMonthTransactions.slice(0, 5)
             ).map((tx) => (
               showAllTx ? (
-                <div key={tx.id} className="overflow-x-auto scrollbar-none hover:bg-surface-container-low transition-colors">
-                  <div className="flex items-center">
-                    <div className="flex items-center gap-3 px-5 py-4 w-full shrink-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                        tx.type === "income" ? "bg-primary-container" : "bg-error-container"
+                /* BUG-003: ลบ overflow-x-auto ออก — ให้ปุ่มเห็นได้ตลอดบน desktop */
+                <div key={tx.id} className="flex items-center hover:bg-surface-container-low transition-colors">
+                  <div className="flex items-center gap-3 px-5 py-4 flex-1 min-w-0">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      tx.type === "income" ? "bg-primary-container" : "bg-error-container"
+                    }`}>
+                      <span className={`material-symbols-outlined text-[18px] ${
+                        tx.type === "income" ? "text-on-primary-container" : "text-on-error-container"
                       }`}>
-                        <span className={`material-symbols-outlined text-[18px] ${
-                          tx.type === "income" ? "text-on-primary-container" : "text-on-error-container"
-                        }`}>
-                          {isPOS(tx) ? "point_of_sale" : tx.type === "income" ? "arrow_upward" : "arrow_downward"}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-body-md text-on-surface truncate">
-                          {isPOS(tx) ? formatPosNote(tx.description ?? "", tx.category ?? "") : (tx.description || getCategoryLabel(tx.category))}
-                        </p>
-                        <p className="font-label-caps text-label-caps text-on-surface-variant">
-                          {getCategoryLabel(tx.category)} · {formatTransactionDate(tx.date)}
-                        </p>
-                      </div>
-                      <p className={`font-semibold text-sm whitespace-nowrap shrink-0 ${
-                        tx.type === "income" ? "text-primary" : "text-error"
-                      }`}>
-                        {tx.type === "income" ? "+" : "-"}{formatBaht(tx.amount)}
+                        {isPOS(tx) ? "point_of_sale" : tx.type === "income" ? "arrow_upward" : "arrow_downward"}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-body-md text-on-surface truncate">
+                        {isPOS(tx) ? formatPosNote(tx.description ?? "", tx.category ?? "") : (tx.description || getCategoryLabel(tx.category))}
+                      </p>
+                      <p className="font-label-caps text-label-caps text-on-surface-variant">
+                        {getCategoryLabel(tx.category)} · {formatTransactionDate(tx.date)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 px-3 border-l border-surface-container-low shrink-0">
-                      <button onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
-                        className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors">
-                        <span className="material-symbols-outlined text-[18px]">edit</span>
-                      </button>
-                      <button onClick={async () => {
-                        if (!window.confirm("ลบรายการนี้?")) return;
-                        try { await deleteTransaction(tx.id); }
-                        catch (e) { window.alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ"); }
-                      }} className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors">
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
-                      </button>
-                    </div>
+                    <p className={`font-semibold text-sm whitespace-nowrap shrink-0 ${
+                      tx.type === "income" ? "text-primary" : "text-error"
+                    }`}>
+                      {tx.type === "income" ? "+" : "-"}{formatBaht(tx.amount)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 px-3 border-l border-surface-container-low shrink-0">
+                    <button onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
+                      className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                    {/* BUG-005: ใช้ in-app modal แทน window.confirm */}
+                    <button onClick={() => setDeletingTxId(tx.id)}
+                      className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -461,6 +466,29 @@ export function DashboardContent() {
         transaction={editingTx}
         onClose={() => setEditingTx(null)}
         onSaved={async () => { setEditingTx(null); await refreshTransactions(); }}
+      />
+
+      {/* BUG-005: in-app delete confirmation */}
+      <ConfirmModal
+        open={!!deletingTxId}
+        title="ลบรายการ"
+        message="ยืนยันการลบรายการนี้? การกระทำนี้ไม่สามารถย้อนกลับได้"
+        confirmLabel="ลบ"
+        loading={deleteLoading}
+        onCancel={() => setDeletingTxId(null)}
+        onConfirm={async () => {
+          if (!deletingTxId) return;
+          setDeleteLoading(true);
+          try {
+            await deleteTransaction(deletingTxId);
+            await refreshTransactions();
+          } catch (e) {
+            window.alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
+          } finally {
+            setDeleteLoading(false);
+            setDeletingTxId(null);
+          }
+        }}
       />
 
 

@@ -23,6 +23,24 @@ function isPosTransaction(note: string) {
   return note?.startsWith("POS_IMPORT_") || note?.startsWith("POS Import:");
 }
 
+const PAYMENT_CHANNELS = ["เงินสด", "โอนเงิน", "บัตรเครดิต", "พร้อมเพย์"];
+
+/** แยก paymentChannel และ actualNote จาก note ของ income
+ *  format ที่บันทึก: "เงินสด — หมายเหตุ..." หรือ "เงินสด" (ไม่มีหมายเหตุ) */
+function parseIncomeNote(note: string): { paymentChannel: string; actualNote: string } {
+  const sepIdx = note.indexOf(" — ");
+  if (sepIdx !== -1) {
+    const maybeCh = note.slice(0, sepIdx);
+    if (PAYMENT_CHANNELS.includes(maybeCh)) {
+      return { paymentChannel: maybeCh, actualNote: note.slice(sepIdx + 3) };
+    }
+  }
+  if (PAYMENT_CHANNELS.includes(note.trim())) {
+    return { paymentChannel: note.trim(), actualNote: "" };
+  }
+  return { paymentChannel: "เงินสด", actualNote: note };
+}
+
 export default function EditTransactionModal({ transaction, onClose, onSaved }: Props) {
   const [form, setForm] = useState({
     date: "",
@@ -31,17 +49,24 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
     amount: "",
     note: "",
   });
+  const [paymentChannel, setPaymentChannel] = useState("เงินสด");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (transaction) {
+      // BUG-004: สำหรับ income ให้แยก paymentChannel ออกจาก note
+      const { paymentChannel: ch, actualNote } =
+        transaction.type === "income" && !isPosTransaction(transaction.note ?? "")
+          ? parseIncomeNote(transaction.note ?? "")
+          : { paymentChannel: "เงินสด", actualNote: transaction.note ?? "" };
+      setPaymentChannel(ch);
       setForm({
         date: transaction.date,
         type: transaction.type,
         category: transaction.category ?? "",
         amount: String(transaction.amount),
-        note: transaction.note ?? "",
+        note: actualNote,
       });
     }
   }, [transaction]);
@@ -69,12 +94,18 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
     }
 
     try {
+      // BUG-004: สร้าง note สำหรับ income โดยรวม paymentChannel กลับเข้าไป
+      const savedNote =
+        form.type === "income" && !isPos
+          ? paymentChannel + (form.note ? ` — ${form.note}` : "")
+          : form.note;
+
       await updateTransaction(transaction.id, {
         date: form.date,
         type: form.type,
         category: form.category,
         amount: parsedAmount,
-        note: form.note,
+        note: savedNote,
       });
 
       onSaved();
@@ -184,6 +215,29 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
             />
           </div>
 
+          {/* BUG-004: ช่องทางชำระเงิน — แสดงเฉพาะ income ที่ไม่ใช่ POS */}
+          {form.type === "income" && !isPos && (
+            <div>
+              <label className="block font-label-caps text-label-caps text-on-surface-variant mb-2">
+                ช่องทางชำระเงิน
+              </label>
+              <div className="relative">
+                <select
+                  value={paymentChannel}
+                  onChange={(e) => setPaymentChannel(e.target.value)}
+                  className="w-full bg-secondary-container rounded-xl px-4 py-3 font-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary appearance-none"
+                >
+                  {PAYMENT_CHANNELS.map((ch) => (
+                    <option key={ch} value={ch}>{ch}</option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">
+                  expand_more
+                </span>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block font-label-caps text-label-caps text-on-surface-variant mb-2">
               จำนวนเงิน (฿) <span className="text-error">*</span>
@@ -218,6 +272,12 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
               readOnly={isPos}
               className={`w-full bg-secondary-container rounded-xl px-4 py-3 font-body-md text-on-surface outline-none placeholder:text-on-surface-variant resize-none ${isPos ? "opacity-50 cursor-not-allowed" : "focus:ring-2 focus:ring-primary"}`}
             />
+            {/* BUG-004: hint ว่า paymentChannel จะถูกบันทึกร่วมกับ note */}
+            {form.type === "income" && !isPos && (
+              <p className="mt-1 font-label-caps text-label-caps text-on-surface-variant">
+                จะบันทึกเป็น &ldquo;{paymentChannel}{form.note ? ` — ${form.note}` : ""}&rdquo;
+              </p>
+            )}
           </div>
         </div>
 

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 
+// BUG-006: ใช้ชื่อภาษาไทยล้วน ตรงกับข้อมูลเดิมใน DB
 const EXPENSE_CATEGORIES = [
-  { value: "วัตถุดิบ (Ingredients)", label: "วัตถุดิบ (Ingredients)" },
+  { value: "วัตถุดิบ", label: "วัตถุดิบ" },
   { value: "ค่าแรง", label: "ค่าแรง" },
   { value: "ค่าเช่า", label: "ค่าเช่า" },
   { value: "ค่าน้ำค่าไฟ", label: "ค่าน้ำค่าไฟ" },
@@ -20,7 +21,7 @@ export function ExpenseNewForm() {
   const { addTransaction } = useTransactions();
 
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("วัตถุดิบ (Ingredients)");
+  const [category, setCategory] = useState("วัตถุดิบ");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [payStatus, setPayStatus] = useState<"paid" | "pending">("paid");
   const [note, setNote] = useState("");
@@ -38,7 +39,6 @@ export function ExpenseNewForm() {
     setError(null);
     setSaving(true);
     try {
-      setSuccess(true);
       await addTransaction({
         date: saveDate,
         type: "expense",
@@ -46,6 +46,8 @@ export function ExpenseNewForm() {
         amount: amt,
         note: (payStatus === "pending" ? "[ค้างชำระ] " : "") + note,
       } as Parameters<typeof addTransaction>[0]);
+      // BUG-007: setSuccess หลัง await สำเร็จ แล้ว redirect ทันที
+      setSuccess(true);
       setTimeout(() => router.push("/expense"), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ กรุณาลองใหม่");

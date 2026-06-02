@@ -148,9 +148,13 @@ export async function fetchAvailableMonths(): Promise<string[]> {
   }
 
   const now = new Date();
-  monthSet.add(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  monthSet.add(currentMonthKey);
 
-  return Array.from(monthSet).sort();
+  // กรองเฉพาะเดือนที่ผ่านมาแล้วหรือเดือนปัจจุบัน (ไม่แสดงอนาคต)
+  return Array.from(monthSet)
+    .filter((m) => m <= currentMonthKey)
+    .sort();
 }
 
 export async function deleteTransaction(id: string): Promise<void> {
