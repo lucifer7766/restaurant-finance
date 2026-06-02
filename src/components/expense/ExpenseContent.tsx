@@ -9,6 +9,8 @@ import { filterTransactionsByMonth } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
 import { ReceiptScanModal, type ScanResult } from "@/components/expense/ReceiptScanModal";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
+import { RecurringExpensePanel } from "@/components/expense/RecurringExpensePanel";
+import type { RecurringTemplate } from "@/lib/recurring";
 
 const EXPENSE_CATEGORY_META: Record<string, { icon: string; iconColor: string; bg: string }> = {
   วัตถุดิบ: { icon: "grocery",       iconColor: "text-on-primary-container",      bg: "bg-primary-container" },
@@ -236,6 +238,16 @@ export function ExpenseContent() {
           {scanning ? "กำลังสแกน..." : "ถ่ายรูปใบเสร็จ"}
         </label>
       </div>
+
+      <RecurringExpensePanel
+        onApply={async (templates: RecurringTemplate[]) => {
+          const today = new Date().toISOString().slice(0, 10);
+          for (const t of templates) {
+            await addTransaction({ date: today, type: "expense", category: t.category, amount: t.amount, note: t.note || `รายจ่ายประจำ — ${t.category}` });
+          }
+          await refreshTransactions();
+        }}
+      />
 
       {error && (
         <div className="sand-card p-4 rounded-xl flex items-center gap-3 border-l-4 border-error">
