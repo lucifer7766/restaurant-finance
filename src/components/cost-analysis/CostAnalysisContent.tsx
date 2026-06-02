@@ -217,6 +217,23 @@ export function CostAnalysisContent() {
         </div>
       </div>
 
+      {/* ── 6-Month Trend Line Chart ────────────────────────── */}
+      {topCategories.length > 0 && (
+        <div className="metric-card p-7 rounded-2xl">
+          <h3 className="font-headline-md text-headline-md text-on-surface mb-1">แนวโน้มต้นทุน 6 เดือน</h3>
+          <p className="font-label-caps text-label-caps text-on-surface-variant mb-5">ทิศทางค่าใช้จ่ายแต่ละหมวดหมู่</p>
+          <TrendLineChart chartData={chartData} topCategories={topCategories} />
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
+            {topCategories.map((cat, i) => (
+              <div key={cat} className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }} />
+                <span className="font-label-caps text-label-caps text-on-surface-variant">{cat}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── 6-Month Grouped Bar Chart ───────────────────────── */}
       <div className="metric-card p-7 rounded-2xl">
         <h3 className="font-headline-md text-headline-md text-on-surface mb-1">เปรียบเทียบต้นทุน 6 เดือน</h3>
@@ -296,6 +313,89 @@ export function CostAnalysisContent() {
         </div>
       )}
 
+    </div>
+  );
+}
+
+/* ─── TrendLineChart (polyline per category, 6 months) ──────────────────── */
+
+function TrendLineChart({
+  chartData,
+  topCategories,
+}: {
+  chartData: Array<{ month: string; byCategory: Record<string, number>; total: number }>;
+  topCategories: string[];
+}) {
+  const CHART_H = 180;
+  const PAD = { top: 16, right: 16, bottom: 36, left: 52 };
+  const innerH = CHART_H - PAD.top - PAD.bottom;
+  const innerW = 320;
+  const totalW = innerW + PAD.left + PAD.right;
+
+  const allValues = chartData.flatMap((d) => topCategories.map((c) => d.byCategory[c] ?? 0));
+  const maxVal = Math.max(...allValues, 1);
+  const paddedMax = Math.ceil(maxVal / 10000) * 10000 || 10000;
+  const yTicks = Array.from({ length: 5 }, (_, i) => (paddedMax / 4) * i);
+  const baseY = PAD.top + innerH;
+
+  const THAI_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+
+  function xFor(idx: number) {
+    return PAD.left + (idx / Math.max(chartData.length - 1, 1)) * innerW;
+  }
+  function yFor(val: number) {
+    return baseY - (val / paddedMax) * innerH;
+  }
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg
+        viewBox={`0 0 ${totalW} ${CHART_H}`}
+        className="w-full min-w-[320px]"
+        style={{ height: `${CHART_H + 8}px` }}
+        role="img"
+        aria-label="6-month cost trend chart"
+      >
+        {/* grid lines */}
+        {yTicks.map((tick) => {
+          const y = yFor(tick);
+          return (
+            <g key={tick}>
+              <line x1={PAD.left} y1={y} x2={totalW - PAD.right} y2={y}
+                stroke="currentColor" strokeOpacity={0.07} vectorEffect="non-scaling-stroke" />
+              <text x={PAD.left - 4} y={y + 0.8} textAnchor="end" dominantBaseline="middle"
+                className="fill-zinc-400" style={{ fontSize: "8px" }}>
+                {formatCompactNumber(tick)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* month labels */}
+        {chartData.map((d, i) => (
+          <text key={d.month} x={xFor(i)} y={baseY + 14} textAnchor="middle"
+            className="fill-zinc-400" style={{ fontSize: "8px" }}>
+            {THAI_MONTHS[Number(d.month.slice(5)) - 1]}
+          </text>
+        ))}
+
+        {/* lines + dots per category */}
+        {topCategories.map((cat, ci) => {
+          const color = CATEGORY_COLORS[ci % CATEGORY_COLORS.length];
+          const points = chartData.map((d, i) => ({ x: xFor(i), y: yFor(d.byCategory[cat] ?? 0), v: d.byCategory[cat] ?? 0 }));
+          const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
+          return (
+            <g key={cat}>
+              <polyline points={polyline} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+              {points.map((p, i) => (
+                <circle key={i} cx={p.x} cy={p.y} r={3} fill={color}>
+                  <title>{`${cat} ${chartData[i].month}: ฿${formatMoney(p.v)}`}</title>
+                </circle>
+              ))}
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }
