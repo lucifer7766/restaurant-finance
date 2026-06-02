@@ -79,6 +79,12 @@ export function DashboardContent() {
       .reduce((s, t) => (t.type === "income" ? s + t.amount : s - t.amount), 0);
   }, [transactions, selectedMonth]);
 
+  const prevCumulativeNet = useMemo(() => {
+    return transactions
+      .filter((t) => t.date.slice(0, 7) <= previousMonthKey)
+      .reduce((s, t) => (t.type === "income" ? s + t.amount : s - t.amount), 0);
+  }, [transactions, previousMonthKey]);
+
   /* alert banner */
   const alert = useMemo(() => {
     if (transactions.length === 0) {
@@ -213,7 +219,7 @@ export function DashboardContent() {
                 {revenueGrowth > 0 ? "trending_up" : "trending_down"}
               </span>
               <span className="font-label-caps text-label-caps" style={{ fontSize: "10px" }}>
-                {revenueGrowth > 0 ? "+" : ""}{revenueGrowth.toFixed(1)}%
+                {revenueGrowth > 0 ? "+" : ""}{revenueGrowth.toFixed(1)}% เทียบเดือนก่อน
               </span>
             </div>
           )}
@@ -236,7 +242,7 @@ export function DashboardContent() {
                 {expenseGrowth > 0 ? "trending_up" : "trending_down"}
               </span>
               <span className="font-label-caps text-label-caps" style={{ fontSize: "10px" }}>
-                {expenseGrowth > 0 ? "+" : ""}{expenseGrowth.toFixed(1)}%
+                {expenseGrowth > 0 ? "+" : ""}{expenseGrowth.toFixed(1)}% เทียบเดือนก่อน
               </span>
             </div>
           )}
@@ -261,6 +267,21 @@ export function DashboardContent() {
           {report.netProfit < 0 && (
             <p className="mt-1 font-label-caps text-label-caps text-error" style={{ fontSize: "10px" }}>ขาดทุน</p>
           )}
+          {(() => {
+            if (prevReport.totalIncome === 0 && prevReport.totalExpenses === 0) return null;
+            const prev = prevReport.netProfit;
+            if (prev === 0) return <p className="mt-2 font-label-caps text-label-caps text-on-surface-variant" style={{ fontSize: "10px" }}>ไม่มีข้อมูลเดือนก่อน</p>;
+            const pct = ((report.netProfit - prev) / Math.abs(prev)) * 100;
+            const up = pct > 0;
+            return (
+              <div className={`mt-2 flex items-center gap-1 ${up ? "text-primary" : "text-error"}`}>
+                <span className="material-symbols-outlined text-[14px]">{up ? "trending_up" : "trending_down"}</span>
+                <span className="font-label-caps text-label-caps" style={{ fontSize: "10px" }}>
+                  {up ? "+" : ""}{pct.toFixed(1)}% เทียบเดือนก่อน
+                </span>
+              </div>
+            );
+          })()}
         </div>
 
         {/* อัตรากำไร */}
@@ -271,12 +292,21 @@ export function DashboardContent() {
           <span className="text-2xl font-bold font-headline-md text-on-surface tracking-tight">
             {report.profitMargin.toFixed(1)}%
           </span>
-          <div className="mt-3 h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all"
-              style={{ width: `${Math.min(Math.max(report.profitMargin, 0), 100)}%` }}
-            />
-          </div>
+          {(() => {
+            if (prevReport.totalIncome === 0 && prevReport.totalExpenses === 0) return null;
+            const prev = prevReport.profitMargin;
+            if (prev === 0) return <p className="mt-2 font-label-caps text-label-caps text-on-surface-variant" style={{ fontSize: "10px" }}>ไม่มีข้อมูลเดือนก่อน</p>;
+            const diff = report.profitMargin - prev;
+            const up = diff > 0;
+            return (
+              <div className={`mt-2 flex items-center gap-1 ${up ? "text-primary" : "text-error"}`}>
+                <span className="material-symbols-outlined text-[14px]">{up ? "trending_up" : "trending_down"}</span>
+                <span className="font-label-caps text-label-caps" style={{ fontSize: "10px" }}>
+                  {up ? "+" : ""}{diff.toFixed(1)}% เทียบเดือนก่อน
+                </span>
+              </div>
+            );
+          })()}
         </div>
 
       </div>
@@ -295,6 +325,19 @@ export function DashboardContent() {
         {cumulativeNet < 0 && (
           <p className="mt-1 font-label-caps text-label-caps text-error">ยอดติดลบ</p>
         )}
+        {prevCumulativeNet !== 0 && (() => {
+          const diff = cumulativeNet - prevCumulativeNet;
+          const pct = (diff / Math.abs(prevCumulativeNet)) * 100;
+          const up = pct > 0;
+          return (
+            <div className={`mt-2 flex items-center gap-1 ${up ? "text-primary" : "text-error"}`}>
+              <span className="material-symbols-outlined text-[14px]">{up ? "trending_up" : "trending_down"}</span>
+              <span className="font-label-caps text-label-caps" style={{ fontSize: "10px" }}>
+                {up ? "+" : ""}{pct.toFixed(1)}% เทียบเดือนก่อน
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Revenue vs Expenses Chart ───────────────────────── */}
