@@ -7,7 +7,7 @@ import {
   getMonthlyReportFromTransactions,
   filterTransactionsByMonth,
 } from "@/lib/data";
-import { formatMonthLabel, formatCompactNumber } from "@/lib/utils";
+import { formatMonthLabel, formatCompactNumber, getCategoryIcon } from "@/lib/utils";
 import { loadBudgets, type BudgetMap } from "@/lib/budget";
 import { BudgetModal } from "./BudgetModal";
 
@@ -559,15 +559,3 @@ function SixMonthGroupedChart({
 }
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
-
-function getCategoryIcon(category: string): string {
-  const lower = category.toLowerCase();
-  if (lower.includes("วัตถุดิบ") || lower.includes("อาหาร") || lower.includes("food") || lower.includes("ingredient")) return "grocery";
-  if (lower.includes("แรง") || lower.includes("เงินเดือน") || lower.includes("labor") || lower.includes("salary")) return "groups";
-  if (lower.includes("เช่า") || lower.includes("rent")) return "home";
-  if (lower.includes("ไฟ") || lower.includes("น้ำ") || lower.includes("utility") || lower.includes("electric")) return "electric_bolt";
-  if (lower.includes("การตลาด") || lower.includes("marketing") || lower.includes("โฆษณา")) return "campaign";
-  if (lower.includes("ซ่อม") || lower.includes("maintenance")) return "build";
-  if (lower.includes("บรรจุ") || lower.includes("packaging")) return "package_2";
-  return "receipt_long";
-}

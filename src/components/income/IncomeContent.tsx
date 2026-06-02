@@ -12,7 +12,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth, getMonthlyReportFromTransactions } from "@/lib/data";
-import { formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote } from "@/lib/utils";
+import { formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote, getCategoryMeta } from "@/lib/utils";
 
 function getPrevMonth(monthKey: string): string {
   const [y, m] = monthKey.split("-").map(Number);
@@ -27,17 +27,6 @@ function formatBaht(amount: number) {
   })}`;
 }
 
-const INCOME_META: Record<string, { icon: string; bg: string; iconColor: string }> = {
-  ยอดขายอาหาร:      { icon: "restaurant",      bg: "bg-surface-container-high", iconColor: "text-on-surface-variant" },
-  ยอดขายเครื่องดื่ม: { icon: "local_bar",       bg: "bg-error-container",        iconColor: "text-error" },
-  เดลิเวอรี:         { icon: "delivery_dining", bg: "bg-surface-container-high", iconColor: "text-on-surface-variant" },
-  จัดเลี้ยง:         { icon: "event",           bg: "bg-primary-container",      iconColor: "text-on-primary-container" },
-};
-
-function getIncomeMeta(category: string) {
-  const key = Object.keys(INCOME_META).find((k) => category.includes(k));
-  return key ? INCOME_META[key] : { icon: "sell", bg: "bg-surface-container-high", iconColor: "text-on-surface-variant" };
-}
 
 const PAYMENT_METHODS = [
   { key: "เงินสด",    icon: "payments",         bg: "bg-error-container",    iconColor: "text-error",                       barColor: "bg-error" },
@@ -331,7 +320,7 @@ export function IncomeContent() {
                     })()}
                     {/* Breakdown header */}
                     <tr className="bg-surface-container-low">
-                      <td colSpan={5} className="py-2 pl-1 font-label-caps text-label-caps text-on-surface-variant">Breakdown รายรับ</td>
+                      <td colSpan={5} className="py-2 pl-1 font-label-caps text-label-caps text-on-surface-variant">แยกตามหมวดรายรับ</td>
                     </tr>
                     {dynIncomeCats
                       .map(cat => ({ cat, a: incBreakA[cat]??0, b: incBreakB[cat]??0 }))
@@ -468,7 +457,7 @@ export function IncomeContent() {
         <div className="space-y-3">
           <h3 className="font-headline-md text-headline-md text-on-surface">สัดส่วนรายรับตามหมวดหมู่</h3>
           {categoryBreakdown.map(({ category, amount }) => {
-            const meta = getIncomeMeta(category);
+            const meta = getCategoryMeta(category);
             return (
               <div key={category} className="metric-card p-5 rounded-2xl flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${meta.bg}`}>
@@ -518,7 +507,7 @@ export function IncomeContent() {
           /* ── Recent (no edit/delete) ── */
           <div className="mt-4 divide-y divide-surface-container-low">
             {monthIncome.slice(0, 5).map((tx) => {
-              const meta = getIncomeMeta(tx.category || "");
+              const meta = getCategoryMeta(tx.category || "");
               return (
                 <div key={tx.id} className="px-5 py-4 grid grid-cols-[auto_1fr_auto] gap-x-3 items-center hover:bg-surface-container-low transition-colors">
                   <div className="min-w-[56px]">
@@ -563,7 +552,7 @@ export function IncomeContent() {
             </div>
             <div className="divide-y divide-surface-container-low">
               {pagedIncome.map((tx) => {
-                const meta = getIncomeMeta(tx.category || "");
+                const meta = getCategoryMeta(tx.category || "");
                 return (
                   /* BUG-003: ลบ overflow-x-auto ออก — ปุ่มเห็นได้ตลอด */
                   <div key={tx.id} className="flex items-center hover:bg-surface-container-low transition-colors">

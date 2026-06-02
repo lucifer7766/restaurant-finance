@@ -10,7 +10,7 @@ import {
   filterTransactionsByMonth,
   getMonthlyReportFromTransactions,
 } from "@/lib/data";
-import { formatBaht, formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote } from "@/lib/utils";
+import { formatBaht, formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote, getCategoryMeta } from "@/lib/utils";
 
 const THAI_MONTHS_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
@@ -333,11 +333,12 @@ export function DashboardContent() {
           <div className="space-y-3">
             {report.expenseBreakdown.map(({ category, amount }) => {
               const pct = totalExpensesSum > 0 ? (amount / totalExpensesSum) * 100 : 0;
+              const meta = getCategoryMeta(category);
               return (
                 <div key={category} className="p-4 rounded-xl bg-surface-container-low flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-primary-container flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-on-primary-container text-[18px]">
-                      receipt_long
+                  <div className={`w-9 h-9 rounded-xl ${meta.bg} flex items-center justify-center shrink-0`}>
+                    <span className={`material-symbols-outlined ${meta.iconColor} text-[18px]`}>
+                      {meta.icon}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">

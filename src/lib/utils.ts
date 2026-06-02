@@ -45,7 +45,7 @@ export const categoryLabels: Record<string, string> = {
   Sales: "รายได้",
   COGS: "ต้นทุนขาย",
   Operations: "ค่าใช้จ่ายดำเนินงาน",
-  // English POS categories → Thai
+  // English POS income categories → Thai
   "Food Sales": "ยอดขายอาหาร",
   "Beverage": "ยอดขายเครื่องดื่ม",
   "Beverages": "ยอดขายเครื่องดื่ม",
@@ -53,7 +53,15 @@ export const categoryLabels: Record<string, string> = {
   "Catering": "จัดเลี้ยง",
   "Other": "อื่นๆ",
   "Others": "อื่นๆ",
-  // Thai expense categories — normalize any spacing variants
+  // English expense categories → Thai
+  "Ingredients": "วัตถุดิบ",
+  "วัตถุดิบ (Ingredients)": "วัตถุดิบ",
+  "Rent": "ค่าเช่า",
+  "Labor": "ค่าแรง",
+  "Utilities": "ค่าน้ำค่าไฟ",
+  "Packaging": "บรรจุภัณฑ์",
+  "Marketing": "การตลาด",
+  // Thai expense categories — normalize spacing variants
   "วัตถุดิบ": "วัตถุดิบ",
   "วัตถุ ดิบ": "วัตถุดิบ",
   "ค่าแรง": "ค่าแรง",
@@ -75,6 +83,35 @@ export const categoryLabels: Record<string, string> = {
   "เดลิเวอรี": "เดลิเวอรี",
   "จัดเลี้ยง": "จัดเลี้ยง",
 };
+
+export type CategoryMeta = { icon: string; iconColor: string; bg: string };
+
+const CATEGORY_META_MAP: Record<string, CategoryMeta> = {
+  // Expense
+  วัตถุดิบ:    { icon: "grocery",       iconColor: "text-on-primary-container",      bg: "bg-primary-container" },
+  ค่าแรง:      { icon: "groups",         iconColor: "text-on-tertiary-fixed-variant", bg: "bg-tertiary-container" },
+  ค่าเช่า:     { icon: "home",           iconColor: "text-on-secondary-container",    bg: "bg-secondary-container" },
+  ค่าน้ำค่าไฟ: { icon: "electric_bolt",  iconColor: "text-error",                     bg: "bg-error-container" },
+  การตลาด:     { icon: "campaign",       iconColor: "text-on-primary-container",      bg: "bg-primary-fixed" },
+  ซ่อมบำรุง:   { icon: "build",          iconColor: "text-on-surface-variant",        bg: "bg-surface-container-high" },
+  บรรจุภัณฑ์:  { icon: "package_2",      iconColor: "text-on-surface-variant",        bg: "bg-surface-container-high" },
+  // Income
+  ยอดขายอาหาร:      { icon: "restaurant",      iconColor: "text-on-surface-variant",        bg: "bg-surface-container-high" },
+  ยอดขายเครื่องดื่ม: { icon: "local_bar",       iconColor: "text-error",                     bg: "bg-error-container" },
+  เดลิเวอรี:         { icon: "delivery_dining", iconColor: "text-on-surface-variant",        bg: "bg-surface-container-high" },
+  จัดเลี้ยง:         { icon: "event",           iconColor: "text-on-primary-container",      bg: "bg-primary-container" },
+};
+
+const DEFAULT_META: CategoryMeta = { icon: "receipt_long", iconColor: "text-on-surface-variant", bg: "bg-surface-container-high" };
+
+export function getCategoryMeta(category: string): CategoryMeta {
+  const label = getCategoryLabel(category);
+  return CATEGORY_META_MAP[label] ?? CATEGORY_META_MAP[category] ?? DEFAULT_META;
+}
+
+export function getCategoryIcon(category: string): string {
+  return getCategoryMeta(category).icon;
+}
 
 /** แปลง POS note → "POS · หมวดหมู่ไทย · ช่องทางชำระเงิน" */
 export function formatPosNote(description: string, category: string): string {

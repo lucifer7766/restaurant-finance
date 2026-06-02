@@ -397,7 +397,7 @@ export function ReportsContent() {
                     {/* ── Breakdown รายรับ header ── */}
                     <tr className="bg-surface-container-low">
                       <td colSpan={5} className="py-2 pr-2 font-label-caps text-label-caps text-on-surface-variant pl-1">
-                        Breakdown รายรับ
+                        แยกตามหมวดรายรับ
                       </td>
                     </tr>
                     {["ยอดขายอาหาร", "ยอดขายเครื่องดื่ม", "เดลิเวอรี", "จัดเลี้ยง", "อื่นๆ"]
@@ -425,7 +425,7 @@ export function ReportsContent() {
                     {/* ── Breakdown รายจ่าย header ── */}
                     <tr className="bg-surface-container-low">
                       <td colSpan={5} className="py-2 pr-2 font-label-caps text-label-caps text-on-surface-variant pl-1">
-                        Breakdown รายจ่าย
+                        แยกตามหมวดรายจ่าย
                       </td>
                     </tr>
                     {["วัตถุดิบ", "ค่าแรง", "ค่าเช่า", "ค่าน้ำค่าไฟ", "การตลาด", "บรรจุภัณฑ์", "อื่นๆ"]

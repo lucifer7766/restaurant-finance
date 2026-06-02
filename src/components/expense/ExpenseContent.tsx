@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth, getMonthlyReportFromTransactions } from "@/lib/data";
-import { formatMonthLabel, formatTransactionDate, getCategoryLabel } from "@/lib/utils";
+import { formatMonthLabel, formatTransactionDate, getCategoryLabel, getCategoryMeta } from "@/lib/utils";
 import { ReceiptScanModal, type ScanResult } from "@/components/expense/ReceiptScanModal";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import { RecurringExpensePanel } from "@/components/expense/RecurringExpensePanel";
@@ -14,22 +14,6 @@ import { PinGate } from "@/components/ui/PinGate";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { RecurringTemplate } from "@/lib/recurring";
 
-const EXPENSE_CATEGORY_META: Record<string, { icon: string; iconColor: string; bg: string }> = {
-  วัตถุดิบ: { icon: "grocery",       iconColor: "text-on-primary-container",      bg: "bg-primary-container" },
-  ค่าแรง:   { icon: "groups",         iconColor: "text-on-tertiary-fixed-variant", bg: "bg-tertiary-container" },
-  ค่าเช่า:  { icon: "home",           iconColor: "text-on-secondary-container",    bg: "bg-secondary-container" },
-  ไฟฟ้า:    { icon: "electric_bolt",  iconColor: "text-error",                     bg: "bg-error-container" },
-  การตลาด:  { icon: "campaign",       iconColor: "text-on-primary-container",      bg: "bg-primary-fixed" },
-  ซ่อมบำรุง: { icon: "build",         iconColor: "text-on-surface-variant",        bg: "bg-surface-container-high" },
-  บรรจุภัณฑ์: { icon: "package_2",   iconColor: "text-on-surface-variant",        bg: "bg-surface-container-high" },
-};
-
-function getCategoryMeta(category: string) {
-  const key = Object.keys(EXPENSE_CATEGORY_META).find((k) => category.includes(k));
-  return key
-    ? EXPENSE_CATEGORY_META[key]
-    : { icon: "receipt_long", iconColor: "text-on-surface-variant", bg: "bg-surface-container-high" };
-}
 
 function getPrevMonth(monthKey: string): string {
   const [y, m] = monthKey.split("-").map(Number);
@@ -344,7 +328,7 @@ export function ExpenseContent() {
                     })()}
                     {/* Breakdown header */}
                     <tr className="bg-surface-container-low">
-                      <td colSpan={5} className="py-2 pl-1 font-label-caps text-label-caps text-on-surface-variant">Breakdown รายจ่าย</td>
+                      <td colSpan={5} className="py-2 pl-1 font-label-caps text-label-caps text-on-surface-variant">แยกตามหมวดรายจ่าย</td>
                     </tr>
                     {dynCats
                       .map(cat => ({ cat, a: rA.expenseBreakdown.find(e=>e.category===cat)?.amount??0, b: rB.expenseBreakdown.find(e=>e.category===cat)?.amount??0 }))
