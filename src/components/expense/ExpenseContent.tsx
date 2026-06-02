@@ -113,10 +113,10 @@ export function ExpenseContent() {
         mimeType = compressed.mimeType;
       }
 
-      // Guard: still too large → open modal with fallback
+      // Guard: still too large → open modal with fallback + note
       const byteSize = Math.ceil((base64.length * 3) / 4);
       if (byteSize > MAX_BYTES) {
-        setScanResult(FALLBACK_RESULT);
+        setScanResult({ ...FALLBACK_RESULT, note: "ไฟล์มีขนาดใหญ่เกินไป กรุณาลองรูปที่มีขนาดเล็กกว่า" });
         setScanning(false);
         setModalOpen(true);
         if (fileInputRef.current) fileInputRef.current.value = "";

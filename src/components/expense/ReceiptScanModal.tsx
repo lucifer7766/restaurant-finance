@@ -101,6 +101,12 @@ export function ReceiptScanModal({ open, onClose, onConfirm, initialData }: Prop
         <div className="overflow-y-auto flex-1 px-6 pt-2 pb-4 space-y-4">
 
           {/* Confidence banner */}
+          {isUnreadable && (
+            <div className="px-4 py-3 bg-error-container rounded-xl flex items-start gap-2">
+              <span className="material-symbols-outlined text-error text-[18px] shrink-0 mt-0.5">error_outline</span>
+              <span className="font-body-md text-sm text-on-surface">อ่านใบเสร็จไม่สำเร็จ กรุณากรอกข้อมูลเองหรือลองอัปโหลดรูปใหม่</span>
+            </div>
+          )}
           {!isUnreadable && initialData?.confidence === "low" && (
             <div className="px-4 py-2 bg-tertiary-container rounded-xl flex items-center gap-2">
               <span className="material-symbols-outlined text-on-tertiary-fixed-variant text-[16px]">warning</span>
