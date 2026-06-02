@@ -202,11 +202,20 @@ export function IncomeContent() {
   const categoryBreakdown = useMemo(() => {
     const totals: Record<string, number> = {};
     monthIncome.forEach((t) => {
-      const cat = t.category || "อื่นๆ";
+      const cat = getCategoryLabel(t.category || "อื่นๆ");
       totals[cat] = (totals[cat] ?? 0) + t.amount;
     });
     return Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([category, amount]) => ({ category, amount }));
   }, [monthIncome]);
+
+  const prevCategoryBreakdown = useMemo(() => {
+    const totals: Record<string, number> = {};
+    prevMonthIncome.forEach((t) => {
+      const cat = getCategoryLabel(t.category || "อื่นๆ");
+      totals[cat] = (totals[cat] ?? 0) + t.amount;
+    });
+    return totals;
+  }, [prevMonthIncome]);
 
   const tabCategories = useMemo(
     () => ["ทั้งหมด", ...categoryBreakdown.slice(0, 3).map((c) => c.category)],
@@ -385,10 +394,24 @@ export function IncomeContent() {
               {totalIncome.toLocaleString("th-TH")}
             </span>
           </div>
+          {prevTotalIncome > 0 ? (() => {
+            const trend = ((totalIncome - prevTotalIncome) / prevTotalIncome) * 100;
+            const up = trend > 0;
+            return (
+              <div className={`mt-3 flex items-center gap-1.5 ${up ? "text-primary" : "text-error"}`}>
+                <span className="material-symbols-outlined text-[16px]">{up ? "trending_up" : "trending_down"}</span>
+                <span className="font-label-caps text-label-caps">
+                  {up ? "+" : ""}{trend.toFixed(1)}% จากเดือนก่อน
+                </span>
+              </div>
+            );
+          })() : (
+            <p className="mt-3 font-label-caps text-label-caps text-on-surface-variant">ไม่มีข้อมูลเดือนก่อน</p>
+          )}
         </div>
       )}
 
-      {/* ── Payment Method Breakdown ────────────────────────── */}
+      {/* ── Category Cards ──────────────────────────────────── */}
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
@@ -400,29 +423,30 @@ export function IncomeContent() {
         </div>
       ) : (
         <div className="space-y-3">
-          {PAYMENT_METHODS.map(({ key, icon, bg, iconColor }) => {
-            const item = paymentBreakdown.find((p) => p.key === key);
-            const amount = item?.amount ?? 0;
-            const prevAmount = item?.prevAmount ?? 0;
+          {categoryBreakdown.slice(0, 3).map(({ category, amount }) => {
+            const meta = getCategoryMeta(category);
             const pct = totalIncome > 0 ? Math.round((amount / totalIncome) * 100) : 0;
-            const hasPrev = prevAmount > 0;
-            const trend = hasPrev ? Math.round(((amount - prevAmount) / prevAmount) * 100) : 0;
+            const prevAmt = prevCategoryBreakdown[category] ?? 0;
+            const hasPrev = prevTotalIncome > 0;
+            const trend = hasPrev && prevAmt > 0 ? ((amount - prevAmt) / prevAmt) * 100 : null;
             return (
-              <div key={key} className="metric-card p-6 rounded-2xl">
+              <div key={category} className="metric-card p-6 rounded-2xl">
                 <div className="flex items-start justify-between mb-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bg}`}>
-                    <span className={`material-symbols-outlined text-[20px] ${iconColor}`}>{icon}</span>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${meta.bg}`}>
+                    <span className={`material-symbols-outlined text-[20px] ${meta.iconColor}`}>{meta.icon}</span>
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-medium tracking-normal text-on-surface-variant">{pct}% ของรายรับทั้งหมด</p>
-                    {hasPrev && (
+                    {trend !== null ? (
                       <p className={`text-xs font-medium tracking-normal ${trend >= 0 ? "text-primary" : "text-error"}`}>
-                        {trend >= 0 ? "+" : ""}{trend}% จากเดือนก่อน
+                        {trend >= 0 ? "+" : ""}{trend.toFixed(1)}% จากเดือนก่อน
                       </p>
-                    )}
+                    ) : hasPrev ? (
+                      <p className="text-xs font-medium tracking-normal text-on-surface-variant">ไม่มีเดือนก่อน</p>
+                    ) : null}
                   </div>
                 </div>
-                <p className="text-sm font-medium text-on-surface-variant mb-1">{key}</p>
+                <p className="text-sm font-medium text-on-surface-variant mb-1">{getCategoryLabel(category)}</p>
                 <div className="flex items-baseline gap-1 text-on-surface">
                   <span className="text-base font-bold opacity-50">฿</span>
                   <span className="text-3xl font-bold font-headline-md tracking-tight">
@@ -454,24 +478,48 @@ export function IncomeContent() {
 
       {/* ── สัดส่วนรายรับตามหมวดหมู่ ───────────────────────── */}
       {!isLoading && categoryBreakdown.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-headline-md text-headline-md text-on-surface">สัดส่วนรายรับตามหมวดหมู่</h3>
-          {categoryBreakdown.map(({ category, amount }) => {
-            const meta = getCategoryMeta(category);
-            return (
-              <div key={category} className="metric-card p-5 rounded-2xl flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${meta.bg}`}>
-                  <span className={`material-symbols-outlined text-[20px] ${meta.iconColor}`}>{meta.icon}</span>
+        <div className="metric-card rounded-2xl overflow-hidden">
+          <div className="p-6 pb-4">
+            <h3 className="font-headline-md text-headline-md text-on-surface">สัดส่วนรายรับตามหมวดหมู่</h3>
+          </div>
+          <div className="px-6 pb-6 space-y-5">
+            {categoryBreakdown.map(({ category, amount }) => {
+              const meta = getCategoryMeta(category);
+              const pct = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
+              const prevAmt = prevCategoryBreakdown[category] ?? 0;
+              const trend = prevTotalIncome > 0 && prevAmt > 0
+                ? ((amount - prevAmt) / prevAmt) * 100
+                : null;
+              return (
+                <div key={category}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
+                        <span className={`material-symbols-outlined text-[16px] ${meta.iconColor}`}>{meta.icon}</span>
+                      </div>
+                      <div>
+                        <p className="font-body-md text-on-surface text-sm">{getCategoryLabel(category)}</p>
+                        {trend !== null ? (
+                          <p className={`font-label-caps text-label-caps text-xs ${trend > 0 ? "text-primary" : trend < 0 ? "text-error" : "text-on-surface-variant"}`}>
+                            {trend > 0 ? "▲ +" : trend < 0 ? "▼ " : ""}{trend.toFixed(1)}% จากเดือนก่อน
+                          </p>
+                        ) : prevTotalIncome > 0 ? (
+                          <p className="font-label-caps text-label-caps text-xs text-on-surface-variant">ไม่มีเดือนก่อน</p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-price-table text-price-table text-on-surface text-sm">{formatBaht(amount)}</p>
+                      <p className="font-label-caps text-label-caps text-on-surface-variant text-xs">{pct.toFixed(1)}%</p>
+                    </div>
+                  </div>
+                  <div className="h-2 bg-surface-container-highest rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-body-md text-on-surface">{getCategoryLabel(category)}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="font-price-table text-price-table text-primary">{formatBaht(amount)}</p>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
