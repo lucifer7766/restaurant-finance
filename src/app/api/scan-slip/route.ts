@@ -10,54 +10,95 @@ const FALLBACK: ScanReceiptResult = {
 };
 
 /** Extract transfer amount from bank slip text.
- *  Priority: ยอดโอน / จำนวนเงิน / Amount / largest number */
+ *  Priority: จำนวนเงิน / ยอดโอน / Amount / Baht lines only — NO fallback to max.
+ *  Never picks numbers from reference IDs, transaction IDs, or account numbers. */
 function extractSlipAmount(text: string): number | null {
+  console.log("[OCR slip] raw text:", text);
+
   const lines = text.split(/\r?\n/);
 
-  // Thai bank keywords
-  const thKeywords = [
-    /ยอดโอน/,
+  // Lines that are reference/transaction IDs — must be excluded
+  function isIdLine(line: string): boolean {
+    // Mixed alpha-numeric like E33982c4e13264328, TXN123456, REF-99887766
+    if (/[A-Za-z][A-Za-z0-9]{5,}/.test(line)) return true;
+    // Explicit ref/id labels
+    if (/ref(?:erence)?|transaction\s*id|รหัส(?:อ้างอิง)?|เลขที่รายการ|เลขอ้างอิง|tracking/i.test(line)) return true;
+    // Account number pattern (10+ consecutive digits)
+    if (/\d{10,}/.test(line)) return true;
+    return false;
+  }
+
+  /** Pull the first plausible monetary number from a line.
+   *  Strips alphanumeric ID tokens first, then prefers decimal (62.00) over integer. */
+  function getMoneyFromLine(line: string): number | null {
+    // Remove alphanumeric ID tokens (e.g. E33982c4e13264328)
+    const cleaned = line.replace(/[A-Za-z][A-Za-z0-9]{4,}/g, " ");
+    // Prefer numbers with decimal places first (most monetary values have .xx)
+    const decimalMatch = cleaned.match(/[\d,]+\.\d{1,2}/g);
+    if (decimalMatch) {
+      const nums = decimalMatch
+        .map((s) => parseFloat(s.replace(/,/g, "")))
+        .filter((n) => n >= 0.01 && n < 10_000_000);
+      if (nums.length) return nums[0]; // first match, not max
+    }
+    // Fall back to plain integers on that line
+    const intMatch = cleaned.match(/[\d,]+/g);
+    if (intMatch) {
+      const nums = intMatch
+        .map((s) => parseFloat(s.replace(/,/g, "")))
+        .filter((n) => n >= 1 && n < 1_000_000);
+      if (nums.length) return nums[0];
+    }
+    return null;
+  }
+
+  // Keywords that indicate an amount line — ordered by priority
+  const amountKeywords = [
     /จำนวนเงิน/,
+    /ยอดโอน/,
     /ยอดชำระ/,
     /ยอดเงิน/,
-    /โอนเงิน.*฿/,
+    /โอนเงิน/,
+    /amount\s*transferred/i,
+    /transfer\s*amount/i,
+    /\bamount\b/i,
+    /baht/i,
+    /บาท/,
   ];
-  for (const kw of thKeywords) {
-    for (const line of lines) {
-      if (kw.test(line)) {
-        const m = line.match(/[\d,]+\.?\d*/g);
-        if (m) {
-          const nums = m
-            .map((s) => parseFloat(s.replace(/,/g, "")))
-            .filter((n) => n >= 1 && n < 10_000_000);
-          if (nums.length) return Math.max(...nums);
-        }
+
+  const candidates: number[] = [];
+
+  for (const kw of amountKeywords) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!kw.test(line)) continue;
+      if (isIdLine(line)) continue;
+
+      // Try same line first
+      const sameLine = getMoneyFromLine(line);
+      if (sameLine !== null) {
+        candidates.push(sameLine);
+        continue;
+      }
+
+      // Try next line (amount may be on line below keyword)
+      if (i + 1 < lines.length && !isIdLine(lines[i + 1])) {
+        const nextLine = getMoneyFromLine(lines[i + 1]);
+        if (nextLine !== null) candidates.push(nextLine);
       }
     }
   }
 
-  // English keywords
-  const enKeywords = [/amount\s*transferred/i, /transfer\s*amount/i, /\bamount\b/i];
-  for (const kw of enKeywords) {
-    for (const line of lines) {
-      if (kw.test(line)) {
-        const m = line.match(/[\d,]+\.?\d*/g);
-        if (m) {
-          const nums = m
-            .map((s) => parseFloat(s.replace(/,/g, "")))
-            .filter((n) => n >= 1 && n < 10_000_000);
-          if (nums.length) return Math.max(...nums);
-        }
-      }
-    }
+  console.log("[OCR slip] amount candidates:", candidates);
+
+  if (candidates.length) {
+    const selected = candidates[0]; // first keyword match wins
+    console.log("[OCR slip] selected amount:", selected);
+    return selected;
   }
 
-  // Fallback: largest number in text (ignore tiny numbers like dates)
-  const allNums = (text.match(/[\d,]+\.?\d*/g) ?? [])
-    .map((s) => parseFloat(s.replace(/,/g, "")))
-    .filter((n) => n >= 10 && n < 10_000_000);
-  if (allNums.length) return Math.max(...allNums);
-
+  // No fallback to max-of-all — return null so UI shows "ไม่สามารถอ่านได้"
+  console.log("[OCR slip] selected amount: null (no keyword match)");
   return null;
 }
 
