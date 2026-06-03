@@ -406,10 +406,10 @@ function TrendLineChart({
   chartData: Array<{ month: string; byCategory: Record<string, number>; total: number }>;
   topCategories: string[];
 }) {
-  const CHART_H = 280;
-  const PAD = { top: 16, right: 16, bottom: 36, left: 52 };
+  const CHART_H = 380;
+  const PAD = { top: 20, right: 20, bottom: 44, left: 64 };
   const innerH = CHART_H - PAD.top - PAD.bottom;
-  const innerW = 320;
+  const innerW = 620;
   const totalW = innerW + PAD.left + PAD.right;
 
   const allValues = chartData.flatMap((d) => topCategories.map((c) => d.byCategory[c] ?? 0));
@@ -428,11 +428,11 @@ function TrendLineChart({
   }
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full">
       <svg
         viewBox={`0 0 ${totalW} ${CHART_H}`}
-        className="w-full min-w-[320px]"
-        style={{ height: `${CHART_H + 8}px` }}
+        className="w-full"
+        style={{ height: "auto", minHeight: "240px" }}
         role="img"
         aria-label="6-month cost trend chart"
       >
@@ -443,8 +443,8 @@ function TrendLineChart({
             <g key={tick}>
               <line x1={PAD.left} y1={y} x2={totalW - PAD.right} y2={y}
                 stroke="currentColor" strokeOpacity={0.07} vectorEffect="non-scaling-stroke" />
-              <text x={PAD.left - 4} y={y + 0.8} textAnchor="end" dominantBaseline="middle"
-                className="fill-zinc-400" style={{ fontSize: "8px" }}>
+              <text x={PAD.left - 6} y={y + 1} textAnchor="end" dominantBaseline="middle"
+                className="fill-zinc-400" style={{ fontSize: "11px" }}>
                 {formatCompactNumber(tick)}
               </text>
             </g>
@@ -453,8 +453,8 @@ function TrendLineChart({
 
         {/* month labels */}
         {chartData.map((d, i) => (
-          <text key={d.month} x={xFor(i)} y={baseY + 14} textAnchor="middle"
-            className="fill-zinc-400" style={{ fontSize: "8px" }}>
+          <text key={d.month} x={xFor(i)} y={baseY + 18} textAnchor="middle"
+            className="fill-zinc-400" style={{ fontSize: "11px" }}>
             {THAI_MONTHS[Number(d.month.slice(5)) - 1]}
           </text>
         ))}
@@ -466,9 +466,9 @@ function TrendLineChart({
           const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
           return (
             <g key={cat}>
-              <polyline points={polyline} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+              <polyline points={polyline} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
               {points.map((p, i) => (
-                <circle key={i} cx={p.x} cy={p.y} r={3} fill={color}>
+                <circle key={i} cx={p.x} cy={p.y} r={4} fill={color}>
                   <title>{`${cat} ${chartData[i].month}: ฿${formatMoney(p.v)}`}</title>
                 </circle>
               ))}
@@ -493,24 +493,24 @@ function SixMonthGroupedChart({
   const maxVal = Math.max(...allValues, 1);
   const paddedMax = Math.ceil(maxVal / 10000) * 10000 || 10000;
 
-  const CHART_H = 280;
-  const PAD = { top: 16, right: 10, bottom: 36, left: 52 };
+  const CHART_H = 380;
+  const PAD = { top: 20, right: 20, bottom: 44, left: 64 };
   const innerH = CHART_H - PAD.top - PAD.bottom;
-  const innerW = 320;
+  const innerW = 620;
   const totalW = innerW + PAD.left + PAD.right;
   const groupW = innerW / chartData.length;
   const barCount = topCategories.length;
-  const barW = Math.min((groupW * 0.7) / barCount, 20);
+  const barW = Math.min((groupW * 0.75) / barCount, 32);
   const groupGap = barW * 0.2;
   const yTicks = Array.from({ length: 5 }, (_, i) => (paddedMax / 4) * i);
   const baseY = PAD.top + innerH;
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full">
       <svg
         viewBox={`0 0 ${totalW} ${CHART_H}`}
-        className="w-full min-w-[320px]"
-        style={{ height: `${CHART_H + 8}px` }}
+        className="w-full"
+        style={{ height: "auto", minHeight: "240px" }}
         role="img"
         aria-label="6-month grouped cost chart"
       >
@@ -520,8 +520,8 @@ function SixMonthGroupedChart({
             <g key={tick}>
               <line x1={PAD.left} y1={y} x2={totalW - PAD.right} y2={y}
                 stroke="currentColor" strokeOpacity={0.07} vectorEffect="non-scaling-stroke" />
-              <text x={PAD.left - 4} y={y + 0.8} textAnchor="end" dominantBaseline="middle"
-                className="fill-zinc-400" style={{ fontSize: "8px" }}>
+              <text x={PAD.left - 6} y={y + 1} textAnchor="end" dominantBaseline="middle"
+                className="fill-zinc-400" style={{ fontSize: "11px" }}>
                 {formatCompactNumber(tick)}
               </text>
             </g>
@@ -546,8 +546,8 @@ function SixMonthGroupedChart({
                   </rect>
                 );
               })}
-              <text x={groupCenterX} y={baseY + 12} textAnchor="middle"
-                className="fill-zinc-400" style={{ fontSize: "8px" }}>
+              <text x={groupCenterX} y={baseY + 18} textAnchor="middle"
+                className="fill-zinc-400" style={{ fontSize: "11px" }}>
                 {["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][Number(d.month.slice(5)) - 1]}
               </text>
             </g>
