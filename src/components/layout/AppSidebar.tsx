@@ -50,10 +50,10 @@ export function AppSidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all ${
+              className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-colors ${
                 isActive
-                  ? "bg-primary-container text-on-primary-container font-semibold scale-95"
-                  : "text-on-surface-variant hover:bg-surface-variant"
+                  ? "bg-primary-container text-on-primary-container font-semibold"
+                  : "text-on-surface-variant hover:bg-surface-container"
               }`}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
