@@ -38,7 +38,7 @@ export function AppSidebar() {
           <h2 className="font-headline-md text-headline-md font-bold text-primary leading-tight">
             PLU
           </h2>
-          <p className="font-label-caps text-label-caps text-on-surface-variant">Bistro Management</p>
+          <p className="font-label-caps text-label-caps text-on-surface-variant">Restaurant Management</p>
         </div>
       </div>
 

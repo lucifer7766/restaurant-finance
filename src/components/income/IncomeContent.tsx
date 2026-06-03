@@ -247,7 +247,7 @@ export function IncomeContent() {
           รายงานรายรับประจำเดือน
         </h2>
         <p className="font-body-md text-on-surface-variant">
-          ตรวจสอบและติดตามรายรับของ PLU Bistro อย่างเป็นระบบ
+          ตรวจสอบและติดตามรายรับของ PLU Restaurant อย่างเป็นระบบ
         </p>
       </div>
 

@@ -268,7 +268,7 @@ export function ExpenseContent() {
           รายงานรายจ่ายประจำเดือน
         </h2>
         <p className="font-body-md text-on-surface-variant">
-          ตรวจสอบและจัดการต้นทุนของ PLU Bistro อย่างเป็นระบบ
+          ตรวจสอบและจัดการต้นทุนของ PLU Restaurant อย่างเป็นระบบ
         </p>
       </div>
 
