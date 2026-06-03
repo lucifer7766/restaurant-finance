@@ -23,7 +23,7 @@ export function MonthSelector() {
       <button
         onClick={goPrev}
         disabled={!canGoPrev}
-        className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        className="p-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         aria-label="เดือนก่อนหน้า"
       >
         <span className="material-symbols-outlined text-[20px]">chevron_left</span>
@@ -36,7 +36,7 @@ export function MonthSelector() {
       <button
         onClick={goNext}
         disabled={!canGoNext}
-        className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        className="p-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         aria-label="เดือนถัดไป"
       >
         <span className="material-symbols-outlined text-[20px]">chevron_right</span>

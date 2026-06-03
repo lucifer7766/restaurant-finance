@@ -313,9 +313,12 @@ export function DashboardContent() {
 
       {/* ── KPI Row 3: ยอดสะสมสุทธิ (full width) ──────────── */}
       <div className="metric-card p-5 rounded-2xl">
-        <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
+        <span className="font-label-caps text-label-caps text-on-surface-variant block mb-1">
           เงินสดคงเหลือ (สะสม)
         </span>
+        <p className="font-label-caps text-label-caps text-on-surface-variant mb-3" style={{ fontSize: "10px" }}>
+          สะสมตั้งแต่เริ่มต้น · ไม่ใช่รายเดือน
+        </p>
         <div className={`flex items-baseline gap-2 ${cumulativeNet >= 0 ? "text-on-surface" : "text-error"}`}>
           <span className="text-2xl font-bold opacity-60">฿</span>
           <span className="font-display-currency text-display-currency tracking-tight leading-none">

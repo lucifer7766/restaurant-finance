@@ -179,7 +179,7 @@ export function CostAnalysisContent() {
               <span className={`material-symbols-outlined text-[20px] ${
                 costRatio > 70 ? "text-error" : "text-on-primary-container"
               }`}>
-                {costRatio > 70 ? "trending_up" : "check_circle"}
+                {costRatio > 70 ? "warning" : "check_circle"}
               </span>
             </div>
             <div className="flex-1">

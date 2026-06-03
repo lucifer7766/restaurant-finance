@@ -9,7 +9,9 @@ import {
   type NewTransaction,
 } from "@/lib/supabase/transactions";
 import { formatSupabaseError } from "@/lib/supabase/errors";
-import { getCategoryLabel, formatPosNote } from "@/lib/utils";
+import { getCategoryLabel, formatPosNote, formatMonthLabel } from "@/lib/utils";
+import { useMonthFilter } from "@/context/MonthFilterContext";
+import { filterTransactionsByMonth } from "@/lib/data";
 import EditTransactionModal from "./EditTransactionModal";
 import * as XLSX from "xlsx";
 
@@ -126,6 +128,8 @@ export function useTransactions() {
 export function TransactionsContent() {
   const { transactions, isLoading, error, addTransaction, deleteTransaction, refreshTransactions } =
     useTransactions();
+
+  const { selectedMonth } = useMonthFilter();
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | TransactionType>("all");
@@ -267,12 +271,17 @@ export function TransactionsContent() {
     );
   }
 
-  /* ── Derived summary from filteredTransactions ── */
-  const summaryIncome = filteredTransactions
+  /* ── Derived summary from month-filtered transactions ── */
+  const monthFilteredTransactions = useMemo(
+    () => filterTransactionsByMonth(transactions, selectedMonth),
+    [transactions, selectedMonth]
+  );
+
+  const summaryIncome = monthFilteredTransactions
     .filter((t) => t.type === "income")
     .reduce((s, t) => s + t.amount, 0);
 
-  const summaryExpense = filteredTransactions
+  const summaryExpense = monthFilteredTransactions
     .filter((t) => t.type === "expense")
     .reduce((s, t) => s + t.amount, 0);
 
@@ -366,6 +375,9 @@ export function TransactionsContent() {
           </div>
         </div>
       </div>
+      <p className="font-label-caps text-label-caps text-on-surface-variant text-right -mt-2">
+        ข้อมูลเดือน {formatMonthLabel(selectedMonth)}
+      </p>
 
       {/* ── Error banner ───────────────────────────────────────────────────── */}
       {error && (

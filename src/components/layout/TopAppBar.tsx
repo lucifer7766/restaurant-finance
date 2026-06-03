@@ -2,11 +2,23 @@
 
 import { MonthSelector } from "@/components/ui/MonthSelector";
 
-type TopAppBarProps = {
-  onToggleDrawer: () => void;
+const PAGE_TITLES: Record<string, string> = {
+  Dashboard: "แดชบอร์ด",
+  Income: "รายรับ",
+  Expense: "รายจ่าย",
+  Reports: "รายงาน",
+  "Cost Analysis": "วิเคราะห์ต้นทุน",
+  Transactions: "รายการทั้งหมด",
 };
 
-export function TopAppBar({ onToggleDrawer }: TopAppBarProps) {
+type TopAppBarProps = {
+  onToggleDrawer: () => void;
+  title?: string;
+};
+
+export function TopAppBar({ onToggleDrawer, title }: TopAppBarProps) {
+  const pageLabel = title ? (PAGE_TITLES[title] ?? title) : null;
+
   return (
     <header className="fixed top-0 w-full z-50 flex justify-between items-center px-container-padding-mobile py-4 bg-surface shadow-sm">
       <div className="flex items-center gap-3">
@@ -17,9 +29,16 @@ export function TopAppBar({ onToggleDrawer }: TopAppBarProps) {
         >
           <span className="material-symbols-outlined text-on-surface">menu</span>
         </button>
-        <h1 className="font-headline-md text-headline-md font-bold text-primary">
-          PLU
-        </h1>
+        <div>
+          <h1 className="font-headline-md text-headline-md font-bold text-primary leading-tight">
+            PLU
+          </h1>
+          {pageLabel && (
+            <p className="font-label-caps text-label-caps text-on-surface-variant leading-none">
+              {pageLabel}
+            </p>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <MonthSelector />

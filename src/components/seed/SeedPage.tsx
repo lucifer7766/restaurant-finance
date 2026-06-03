@@ -96,12 +96,15 @@ const DEMO_DATA: SeedRow[] = [
   { date: "2026-01-18", type: "expense", category: "บรรจุภัณฑ์",  amount: 25000,  note: "บรรจุภัณฑ์" },
 ];
 
+const isProduction = process.env.NODE_ENV === "production";
+
 type Status = "idle" | "loading" | "success" | "error";
 
 export function SeedPage() {
   const [status, setStatus] = useState<Status>("idle");
   const [log, setLog] = useState<string[]>([]);
   const [cleared, setCleared] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
 
   async function handleSeed(clearFirst: boolean) {
     setStatus("loading");
@@ -139,6 +142,24 @@ export function SeedPage() {
 
   return (
     <div className="max-w-lg mx-auto space-y-6 py-8">
+      {isProduction && (
+        <div className="rounded-xl border-2 border-error bg-error-container p-4 flex flex-col gap-3">
+          <p className="font-body-md text-on-error-container font-semibold">
+            ⚠️ คุณกำลังใช้งานในโหมด Production — การ seed ข้อมูลจะ overwrite ข้อมูลจริง กรุณาระวัง
+          </p>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="font-label-caps text-label-caps text-on-error-container">
+              ฉันเข้าใจและยืนยัน
+            </span>
+          </label>
+        </div>
+      )}
       <div>
         <h2 className="font-headline-lg text-headline-lg-mobile text-on-surface mb-1">
           Demo Data Seeder
@@ -173,14 +194,14 @@ export function SeedPage() {
       <div className="flex flex-col gap-3">
         <button
           onClick={() => handleSeed(true)}
-          disabled={status === "loading"}
+          disabled={status === "loading" || (isProduction && !confirmed)}
           className="btn-primary w-full py-4 disabled:opacity-60"
         >
           {status === "loading" && !cleared ? "กำลังดำเนินการ..." : "🗑️  ล้างข้อมูลเดิม แล้ว Insert ใหม่"}
         </button>
         <button
           onClick={() => handleSeed(false)}
-          disabled={status === "loading"}
+          disabled={status === "loading" || (isProduction && !confirmed)}
           className="btn-secondary w-full py-4 disabled:opacity-60"
         >
           ➕ เพิ่มข้อมูลโดยไม่ล้างของเดิม

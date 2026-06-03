@@ -263,7 +263,7 @@ export function ReportsContent() {
           สรุปผลประกอบการประจำเดือน {formatMonthLabel(selectedMonth)}
           {!growthIncome.noData && (
             <span className={`ml-2 font-semibold text-sm ${growthIncome.up ? "text-primary" : "text-error"}`}>
-              {growthIncome.text.replace(" เทียบเดือนก่อน", "")} จากเดือนที่แล้ว
+              · {growthIncome.text.replace(" เทียบเดือนก่อน", "")} จากเดือนที่แล้ว
             </span>
           )}
         </p>
