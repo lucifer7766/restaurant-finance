@@ -1,8 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { TopAppBar } from "./TopAppBar";
-import { BottomNav } from "./BottomNav";
 
 type DashboardShellProps = {
   title: string;
@@ -10,14 +10,15 @@ type DashboardShellProps = {
 };
 
 export function DashboardShell({ children }: DashboardShellProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   return (
-    <div className="canvas-bg min-h-screen pb-24 md:pb-0">
-      <TopAppBar />
-      <AppSidebar />
-      <main className="lg:ml-72 max-w-[1280px] mx-auto px-container-padding-mobile md:px-container-padding-desktop pt-24 pb-8">
+    <div className="canvas-bg min-h-screen">
+      <TopAppBar onToggleDrawer={() => setDrawerOpen((v) => !v)} />
+      <AppSidebar isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <main className="max-w-[1280px] mx-auto px-container-padding-mobile md:px-container-padding-desktop pt-24 pb-8">
         {children}
       </main>
-      <BottomNav />
     </div>
   );
 }
