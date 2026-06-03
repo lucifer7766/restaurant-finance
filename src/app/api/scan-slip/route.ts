@@ -9,97 +9,157 @@ const FALLBACK: ScanReceiptResult = {
   confidence: "unreadable",
 };
 
-/** Extract transfer amount from bank slip text.
- *  Priority: จำนวนเงิน / ยอดโอน / Amount / Baht lines only — NO fallback to max.
- *  Never picks numbers from reference IDs, transaction IDs, or account numbers. */
+/**
+ * Extract transfer amount from bank slip OCR text.
+ *
+ * Strategy (two phases, no Math.max fallback):
+ *   Phase 1 – Label keywords: "Amount:", "จำนวนเงิน", etc.
+ *             → check same line, then next line (handles two-line KBank format)
+ *   Phase 2 – Inline currency words: "Baht", "บาท", "฿"
+ *             → same-line only (currency word sits beside the number)
+ *
+ * Never reads from: Transaction ID / Reference ID / account numbers / fee lines.
+ *
+ * Root-cause fix vs. previous version:
+ *   Old isIdLine() matched ANY word ≥ 6 chars (e.g. "Amount", "Payment"),
+ *   which caused the "Amount:" keyword line to be silently skipped and its
+ *   next-line value ("60.00 Baht") to be ignored.
+ *   New isValueNoiseLine() only flags actual ID/account tokens.
+ */
 function extractSlipAmount(text: string): number | null {
-  console.log("[OCR slip] raw text:", text);
+  const lines = text.split(/\r?\n/).map((l) => l.trim());
 
-  const lines = text.split(/\r?\n/);
+  // ── helpers ────────────────────────────────────────────────────────────────
 
-  // Lines that are reference/transaction IDs — must be excluded
-  function isIdLine(line: string): boolean {
-    // Mixed alpha-numeric like E33982c4e13264328, TXN123456, REF-99887766
-    if (/[A-Za-z][A-Za-z0-9]{5,}/.test(line)) return true;
-    // Explicit ref/id labels
-    if (/ref(?:erence)?|transaction\s*id|รหัส(?:อ้างอิง)?|เลขที่รายการ|เลขอ้างอิง|tracking/i.test(line)) return true;
-    // Account number pattern (10+ consecutive digits)
+  /**
+   * True only for lines that contain actual reference/account ID values.
+   * Does NOT match normal English words like "Amount", "Payment", "Completed".
+   */
+  function isValueNoiseLine(line: string): boolean {
+    // Alphanumeric ID token: letter(s) immediately adjacent to 5+ digits
+    // e.g. "016153204847APM18899", "E33982c4e13264328", "TXN123456"
+    if (/[A-Za-z]\d{5,}|\d{5,}[A-Za-z]/.test(line)) return true;
+    // Pure digit account/phone numbers (10+ consecutive digits)
     if (/\d{10,}/.test(line)) return true;
+    // Explicit reference label lines (label only, no amount expected here)
+    if (/^(transaction\s*id|reference|ref|รหัส|เลขที่รายการ|order\s*id)\s*:?\s*$/i.test(line)) return true;
     return false;
   }
 
-  /** Pull the first plausible monetary number from a line.
-   *  Strips alphanumeric ID tokens first, then prefers decimal (62.00) over integer. */
-  function getMoneyFromLine(line: string): number | null {
-    // Remove alphanumeric ID tokens (e.g. E33982c4e13264328)
-    const cleaned = line.replace(/[A-Za-z][A-Za-z0-9]{4,}/g, " ");
-    // Prefer numbers with decimal places first (most monetary values have .xx)
-    const decimalMatch = cleaned.match(/[\d,]+\.\d{1,2}/g);
-    if (decimalMatch) {
-      const nums = decimalMatch
-        .map((s) => parseFloat(s.replace(/,/g, "")))
+  /** True when this line is a fee/charge label or its adjacent value line. */
+  function isFeeLabel(line: string): boolean {
+    return /\bfee\b|ค่าธรรมเนียม|ค่าบริการ|\bcharge\b/i.test(line);
+  }
+
+  /**
+   * Extract the first plausible monetary amount from a line.
+   * Strips date/time patterns and currency words before scanning.
+   * Returns null if the line looks like an ID/noise line.
+   */
+  function getMoney(line: string): number | null {
+    if (isValueNoiseLine(line)) return null;
+
+    // Remove currency/unit words so they don't interfere with number detection
+    let s = line
+      .replace(/\b(baht|thb)\b/gi, " ")
+      .replace(/บาท/g, " ")
+      .replace(/฿/g, " ");
+
+    // Remove time patterns: "8:48 PM", "12:30"
+    s = s.replace(/\b\d{1,2}:\d{2}(?:\s*(?:am|pm))?\b/gi, " ");
+
+    // Remove date patterns: "2 Jun 26", "15 Jan 2024"
+    s = s.replace(
+      /\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{2,4}\b/gi,
+      " "
+    );
+
+    // Prefer decimal numbers (monetary amounts almost always have .xx)
+    const dec = s.match(/\b[\d,]+\.\d{1,2}\b/g);
+    if (dec) {
+      const nums = dec
+        .map((n) => parseFloat(n.replace(/,/g, "")))
         .filter((n) => n >= 0.01 && n < 10_000_000);
-      if (nums.length) return nums[0]; // first match, not max
-    }
-    // Fall back to plain integers on that line
-    const intMatch = cleaned.match(/[\d,]+/g);
-    if (intMatch) {
-      const nums = intMatch
-        .map((s) => parseFloat(s.replace(/,/g, "")))
-        .filter((n) => n >= 1 && n < 1_000_000);
       if (nums.length) return nums[0];
     }
+
+    // Plain integers (avoid 4-digit years that look like amounts)
+    const ints = s.match(/\b[\d,]+\b/g);
+    if (ints) {
+      const nums = ints
+        .map((n) => parseFloat(n.replace(/,/g, "")))
+        .filter((n) => n >= 1 && n < 1_000_000 && !/^(19|20)\d{2}$/.test(n.toString()));
+      if (nums.length) return nums[0];
+    }
+
     return null;
   }
 
-  // Keywords that indicate an amount line — ordered by priority
-  const amountKeywords = [
+  // ── pre-compute fee line indices ───────────────────────────────────────────
+  // Fee lines AND their immediate next line (which holds "0.00 Baht") are excluded.
+  const feeLines = new Set<number>();
+  for (let i = 0; i < lines.length; i++) {
+    if (isFeeLabel(lines[i])) {
+      feeLines.add(i);
+      feeLines.add(i + 1);
+    }
+  }
+
+  const candidates: number[] = [];
+
+  // ── Phase 1: label keywords ───────────────────────────────────────────────
+  // These words act as labels; the amount can be on the same line OR the next.
+  const labelKeywords: RegExp[] = [
     /จำนวนเงิน/,
     /ยอดโอน/,
     /ยอดชำระ/,
     /ยอดเงิน/,
     /โอนเงิน/,
     /amount\s*transferred/i,
-    /transfer\s*amount/i,
+    /transfer(?:red)?\s*amount/i,
     /\bamount\b/i,
-    /baht/i,
-    /บาท/,
+    /\btotal\b/i,
+    /\bรวม\b/,
+    /\bthb\b/i,
   ];
 
-  const candidates: number[] = [];
-
-  for (const kw of amountKeywords) {
+  for (const kw of labelKeywords) {
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (!kw.test(line)) continue;
-      if (isIdLine(line)) continue;
+      if (feeLines.has(i)) continue;
+      if (!kw.test(lines[i])) continue;
 
-      // Try same line first
-      const sameLine = getMoneyFromLine(line);
-      if (sameLine !== null) {
-        candidates.push(sameLine);
+      // Same line (e.g. "Amount: 60.00" or "ยอดเงิน 60.00")
+      const v = getMoney(lines[i]);
+      if (v !== null && v > 0) {
+        candidates.push(v);
         continue;
       }
 
-      // Try next line (amount may be on line below keyword)
-      if (i + 1 < lines.length && !isIdLine(lines[i + 1])) {
-        const nextLine = getMoneyFromLine(lines[i + 1]);
-        if (nextLine !== null) candidates.push(nextLine);
+      // Next line (e.g. "Amount:\n60.00 Baht")
+      if (i + 1 < lines.length && !feeLines.has(i + 1)) {
+        const nv = getMoney(lines[i + 1]);
+        if (nv !== null && nv > 0) candidates.push(nv);
       }
+    }
+    if (candidates.length) break; // stop at first matching keyword
+  }
+
+  // ── Phase 2: inline currency keywords (same line only) ────────────────────
+  // Only used when Phase 1 found nothing.
+  if (!candidates.length) {
+    const inlineKeywords: RegExp[] = [/baht/i, /บาท/, /฿/];
+    for (const kw of inlineKeywords) {
+      for (let i = 0; i < lines.length; i++) {
+        if (feeLines.has(i)) continue;
+        if (!kw.test(lines[i])) continue;
+        const v = getMoney(lines[i]);
+        if (v !== null && v > 0) candidates.push(v);
+      }
+      if (candidates.length) break;
     }
   }
 
-  console.log("[OCR slip] amount candidates:", candidates);
-
-  if (candidates.length) {
-    const selected = candidates[0]; // first keyword match wins
-    console.log("[OCR slip] selected amount:", selected);
-    return selected;
-  }
-
-  // No fallback to max-of-all — return null so UI shows "ไม่สามารถอ่านได้"
-  console.log("[OCR slip] selected amount: null (no keyword match)");
-  return null;
+  return candidates[0] ?? null;
 }
 
 const EN_MONTHS: Record<string, string> = {

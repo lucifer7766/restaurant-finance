@@ -31,29 +31,38 @@ const VALID_CATEGORIES = [
 
 /* ── Text Parsers ────────────────────────────────────────────────────────── */
 
-/** Extract amount from receipt.
- *  Priority: GRAND TOTAL > TOTAL > จำนวนเงิน/Amount/บาท/Baht lines.
- *  Never uses largest-number fallback — avoids picking reference/item codes. */
+/**
+ * Extract amount from receipt OCR text.
+ * Priority: GRAND TOTAL > TOTAL > จำนวนเงิน/Amount/บาท/Baht.
+ * Never uses Math.max fallback. Never reads reference/account IDs as amounts.
+ */
 function extractAmount(text: string): number | null {
-  console.log("[OCR receipt] raw text:", text);
+  const lines = text.split(/\r?\n/).map((l) => l.trim());
 
-  const lines = text.split(/\r?\n/);
+  /** True only for actual ID/account value lines, NOT for normal English words. */
+  function isValueNoiseLine(line: string): boolean {
+    if (/[A-Za-z]\d{5,}|\d{5,}[A-Za-z]/.test(line)) return true;
+    if (/\d{10,}/.test(line)) return true;
+    if (/^(ref(?:erence)?|รหัส|เลขที่รายการ|transaction\s*id|order\s*id)\s*:?\s*$/i.test(line)) return true;
+    return false;
+  }
 
-  /** Remove alphanumeric ID tokens then return first monetary number on line. */
-  function getMoneyFromLine(line: string): number | null {
-    const cleaned = line.replace(/[A-Za-z][A-Za-z0-9]{4,}/g, " ");
-    const decimalMatch = cleaned.match(/[\d,]+\.\d{1,2}/g);
-    if (decimalMatch) {
-      const nums = decimalMatch
-        .map((s) => parseFloat(s.replace(/,/g, "")))
-        .filter((n) => n >= 0.01 && n < 10_000_000);
+  /** Extract first plausible monetary amount. Returns null for noise lines. */
+  function getMoney(line: string): number | null {
+    if (isValueNoiseLine(line)) return null;
+    const s = line
+      .replace(/\b(baht|thb)\b/gi, " ")
+      .replace(/บาท/g, " ")
+      .replace(/฿/g, " ")
+      .replace(/\b\d{1,2}:\d{2}(?:\s*(?:am|pm))?\b/gi, " ");
+    const dec = s.match(/\b[\d,]+\.\d{1,2}\b/g);
+    if (dec) {
+      const nums = dec.map((n) => parseFloat(n.replace(/,/g, ""))).filter((n) => n >= 0.01 && n < 10_000_000);
       if (nums.length) return nums[0];
     }
-    const intMatch = cleaned.match(/[\d,]+/g);
-    if (intMatch) {
-      const nums = intMatch
-        .map((s) => parseFloat(s.replace(/,/g, "")))
-        .filter((n) => n >= 1 && n < 1_000_000);
+    const ints = s.match(/\b[\d,]+\b/g);
+    if (ints) {
+      const nums = ints.map((n) => parseFloat(n.replace(/,/g, ""))).filter((n) => n >= 1 && n < 1_000_000 && !/^(19|20)\d{2}$/.test(n.toString()));
       if (nums.length) return nums[0];
     }
     return null;
@@ -61,50 +70,54 @@ function extractAmount(text: string): number | null {
 
   const candidates: number[] = [];
 
-  // 1. GRAND TOTAL
-  for (const line of lines) {
-    if (/grand\s*total/i.test(line)) {
-      const amt = getMoneyFromLine(line);
-      if (amt !== null) { candidates.push(amt); break; }
+  // 1. GRAND TOTAL (same line or next line)
+  for (let i = 0; i < lines.length; i++) {
+    if (/grand\s*total/i.test(lines[i])) {
+      const v = getMoney(lines[i]) ?? (i + 1 < lines.length ? getMoney(lines[i + 1]) : null);
+      if (v !== null) { candidates.push(v); break; }
     }
   }
 
   // 2. TOTAL (not subtotal)
   if (!candidates.length) {
-    for (const line of lines) {
-      if (/\btotal\b/i.test(line) && !/sub\s*total/i.test(line)) {
-        const amt = getMoneyFromLine(line);
-        if (amt !== null) { candidates.push(amt); break; }
+    for (let i = 0; i < lines.length; i++) {
+      if (/\btotal\b/i.test(lines[i]) && !/sub\s*total/i.test(lines[i])) {
+        const v = getMoney(lines[i]) ?? (i + 1 < lines.length ? getMoney(lines[i + 1]) : null);
+        if (v !== null) { candidates.push(v); break; }
       }
     }
   }
 
-  // 3. จำนวนเงิน / Amount / บาท / Baht
+  // 3. Amount-label keywords (same line + next line)
   if (!candidates.length) {
-    const slipKeywords = [/จำนวนเงิน/, /ยอดเงิน/, /\bamount\b/i, /baht/i, /บาท/];
-    for (const kw of slipKeywords) {
+    const labelKws = [/จำนวนเงิน/, /ยอดเงิน/, /ยอดโอน/, /ยอดชำระ/, /\bamount\b/i, /\bthb\b/i];
+    for (const kw of labelKws) {
       for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (!kw.test(line)) continue;
-        if (/ref(?:erence)?|รหัส|เลขที่รายการ/i.test(line)) continue;
-        if (/[A-Za-z][A-Za-z0-9]{5,}/.test(line) || /\d{10,}/.test(line)) continue;
-        const amt = getMoneyFromLine(line);
-        if (amt !== null) { candidates.push(amt); break; }
-        // try next line
+        if (!kw.test(lines[i])) continue;
+        const v = getMoney(lines[i]);
+        if (v !== null) { candidates.push(v); break; }
         if (i + 1 < lines.length) {
-          const next = getMoneyFromLine(lines[i + 1]);
-          if (next !== null) { candidates.push(next); break; }
+          const nv = getMoney(lines[i + 1]);
+          if (nv !== null) { candidates.push(nv); break; }
         }
       }
       if (candidates.length) break;
     }
   }
 
-  console.log("[OCR receipt] amount candidates:", candidates);
+  // 4. Inline currency (same line only)
+  if (!candidates.length) {
+    for (const kw of [/baht/i, /บาท/, /฿/]) {
+      for (let i = 0; i < lines.length; i++) {
+        if (!kw.test(lines[i])) continue;
+        const v = getMoney(lines[i]);
+        if (v !== null) { candidates.push(v); break; }
+      }
+      if (candidates.length) break;
+    }
+  }
 
-  const selected = candidates[0] ?? null;
-  console.log("[OCR receipt] selected amount:", selected);
-  return selected;
+  return candidates[0] ?? null;
 }
 
 const EN_MONTHS: Record<string, string> = {
