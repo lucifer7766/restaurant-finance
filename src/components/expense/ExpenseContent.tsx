@@ -12,6 +12,7 @@ import EditTransactionModal from "@/components/transactions/EditTransactionModal
 import { RecurringExpensePanel } from "@/components/expense/RecurringExpensePanel";
 import { PinGate } from "@/components/ui/PinGate";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { SwipeableRow } from "@/components/ui/SwipeableRow";
 import type { RecurringTemplate } from "@/lib/recurring";
 
 
@@ -585,9 +586,12 @@ export function ExpenseContent() {
               {pagedExpenses.map((tx) => {
                 const meta = getCategoryMeta(tx.category || "");
                 return (
-                  /* BUG-003: ลบ overflow-x-auto ออก — ปุ่มเห็นได้ตลอด */
-                  <div key={tx.id} className="flex items-center hover:bg-surface-container-low transition-colors">
-                    <div className="grid grid-cols-[52px_1fr_auto] gap-x-3 items-center px-4 py-4 flex-1 min-w-0">
+                  <SwipeableRow
+                    key={tx.id}
+                    onEdit={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
+                    onDelete={() => withPin(() => setDeletingTxId(tx.id))}
+                  >
+                    <div className="grid grid-cols-[52px_1fr_auto] gap-x-3 items-center px-4 py-4 hover:bg-surface-container-low transition-colors">
                       <p className="font-label-caps text-label-caps text-on-surface leading-tight">
                         {formatTransactionDate(tx.date)}
                       </p>
@@ -603,22 +607,7 @@ export function ExpenseContent() {
                         -฿{tx.amount.toLocaleString("th-TH")}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 px-3 border-l border-surface-container-low shrink-0">
-                      <button
-                        onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
-                        className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">edit</span>
-                      </button>
-                      {/* BUG-005: ใช้ in-app modal แทน window.confirm (ผ่าน PinGate ก่อน) */}
-                      <button
-                        onClick={() => withPin(() => setDeletingTxId(tx.id))}
-                        className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
-                      </button>
-                    </div>
-                  </div>
+                  </SwipeableRow>
                 );
               })}
             </div>

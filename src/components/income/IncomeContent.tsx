@@ -10,6 +10,7 @@ import { PosImportHistory, EditBatchModal, DeleteConfirmModal, type ImportBatch 
 import { updateTransaction, deleteTransaction as deleteTransactionFromSupabase } from "@/lib/supabase/transactions";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { SwipeableRow } from "@/components/ui/SwipeableRow";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth, getMonthlyReportFromTransactions } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote, getCategoryMeta } from "@/lib/utils";
@@ -602,9 +603,18 @@ export function IncomeContent() {
               {pagedIncome.map((tx) => {
                 const meta = getCategoryMeta(tx.category || "");
                 return (
-                  /* BUG-003: ลบ overflow-x-auto ออก — ปุ่มเห็นได้ตลอด */
-                  <div key={tx.id} className="flex items-center hover:bg-surface-container-low transition-colors">
-                    <div className="grid grid-cols-[52px_1fr_auto] gap-x-3 items-center px-4 py-4 flex-1 min-w-0">
+                  <SwipeableRow
+                    key={tx.id}
+                    onEdit={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
+                    onDelete={() => {
+                      if (parseBatchId(tx.description || "")) {
+                        alert("รายการนี้มาจาก POS Import\nกรุณาลบทั้ง batch จากประวัติการนำเข้า POS");
+                        return;
+                      }
+                      setDeletingTxId(tx.id);
+                    }}
+                  >
+                    <div className="grid grid-cols-[52px_1fr_auto] gap-x-3 items-center px-4 py-4 hover:bg-surface-container-low transition-colors">
                       <p className="font-label-caps text-label-caps text-on-surface leading-tight">
                         {formatTransactionDate(tx.date)}
                       </p>
@@ -620,28 +630,7 @@ export function IncomeContent() {
                         +{formatBaht(tx.amount)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 px-3 border-l border-surface-container-low shrink-0">
-                      <button
-                        onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
-                        className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">edit</span>
-                      </button>
-                      {/* BUG-005: ใช้ in-app modal แทน window.confirm */}
-                      <button
-                        onClick={() => {
-                          if (parseBatchId(tx.description || "")) {
-                            alert("รายการนี้มาจาก POS Import\nกรุณาลบทั้ง batch จากประวัติการนำเข้า POS");
-                            return;
-                          }
-                          setDeletingTxId(tx.id);
-                        }}
-                        className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
-                      </button>
-                    </div>
-                  </div>
+                  </SwipeableRow>
                 );
               })}
             </div>

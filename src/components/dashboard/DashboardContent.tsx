@@ -6,6 +6,7 @@ import { useMonthFilter } from "@/context/MonthFilterContext";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { SwipeableRow } from "@/components/ui/SwipeableRow";
 import {
   filterTransactionsByMonth,
   getMonthlyReportFromTransactions,
@@ -440,9 +441,13 @@ export function DashboardContent() {
               : selectedMonthTransactions.slice(0, 5)
             ).map((tx) => (
               showAllTx ? (
-                /* BUG-003: ลบ overflow-x-auto ออก — ให้ปุ่มเห็นได้ตลอดบน desktop */
-                <div key={tx.id} className="flex items-center hover:bg-surface-container-low transition-colors">
-                  <div className="flex items-center gap-3 px-5 py-4 flex-1 min-w-0">
+                <SwipeableRow
+                  key={tx.id}
+                  onEdit={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
+                  onDelete={() => setDeletingTxId(tx.id)}
+                  className="border-b border-surface-container-low last:border-0"
+                >
+                  <div className="flex items-center gap-3 px-5 py-4 hover:bg-surface-container-low transition-colors">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                       tx.type === "income" ? "bg-primary-container" : "bg-error-container"
                     }`}>
@@ -466,18 +471,7 @@ export function DashboardContent() {
                       {tx.type === "income" ? "+" : "-"}{formatBaht(tx.amount)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 px-3 border-l border-surface-container-low shrink-0">
-                    <button onClick={() => setEditingTx({ id: tx.id, date: tx.date, type: tx.type, category: tx.category ?? "", amount: tx.amount, note: tx.description ?? "" })}
-                      className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary-container transition-colors">
-                      <span className="material-symbols-outlined text-[18px]">edit</span>
-                    </button>
-                    {/* BUG-005: ใช้ in-app modal แทน window.confirm */}
-                    <button onClick={() => setDeletingTxId(tx.id)}
-                      className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-colors">
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
-                    </button>
-                  </div>
-                </div>
+                </SwipeableRow>
               ) : (
                 <div key={tx.id} className="px-5 py-4 flex items-center gap-3 hover:bg-surface-container-low transition-colors">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${

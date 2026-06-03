@@ -13,6 +13,7 @@ import { getCategoryLabel, formatPosNote, formatMonthLabel } from "@/lib/utils";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { filterTransactionsByMonth } from "@/lib/data";
 import EditTransactionModal from "./EditTransactionModal";
+import { SwipeableRow } from "@/components/ui/SwipeableRow";
 import * as XLSX from "xlsx";
 
 type TransactionType = "income" | "expense";
@@ -447,28 +448,34 @@ export function TransactionsContent() {
         ) : (
           <div className="divide-y divide-surface-container-low">
             {filteredTransactions.map((item) => (
-              <div key={item.id} className="px-5 py-4 flex items-center gap-3 hover:bg-surface-container-low transition-colors">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                  item.type === "income" ? "bg-primary-container" : "bg-error-container"
-                }`}>
-                  <span className={`material-symbols-outlined text-[18px] ${
-                    item.type === "income" ? "text-on-primary-container" : "text-on-error-container"
+              <SwipeableRow
+                key={item.id}
+                onEdit={() => setEditingTransaction(item)}
+                onDelete={() => handleDelete(item.id)}
+              >
+                <div className="px-5 py-4 flex items-center gap-3 hover:bg-surface-container-low transition-colors">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    item.type === "income" ? "bg-primary-container" : "bg-error-container"
                   }`}>
-                    {item.type === "income" ? "arrow_upward" : "arrow_downward"}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-body-md text-on-surface truncate">{getText(item)}</p>
-                  <p className="font-label-caps text-label-caps text-on-surface-variant">
-                    {getCategoryLabel(item.category ?? "")} · {item.date}
+                    <span className={`material-symbols-outlined text-[18px] ${
+                      item.type === "income" ? "text-on-primary-container" : "text-on-error-container"
+                    }`}>
+                      {item.type === "income" ? "arrow_upward" : "arrow_downward"}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-body-md text-on-surface truncate">{getText(item)}</p>
+                    <p className="font-label-caps text-label-caps text-on-surface-variant">
+                      {getCategoryLabel(item.category ?? "")} · {item.date}
+                    </p>
+                  </div>
+                  <p className={`font-semibold text-sm whitespace-nowrap shrink-0 ${
+                    item.type === "income" ? "text-primary" : "text-error"
+                  }`}>
+                    {item.type === "income" ? "+" : "-"}{formatBaht(item.amount)}
                   </p>
                 </div>
-                <p className={`font-semibold text-sm whitespace-nowrap shrink-0 ${
-                  item.type === "income" ? "text-primary" : "text-error"
-                }`}>
-                  {item.type === "income" ? "+" : "-"}{formatBaht(item.amount)}
-                </p>
-              </div>
+              </SwipeableRow>
             ))}
           </div>
         )}
