@@ -44,7 +44,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
       {/* Drawer */}
       <aside
         aria-hidden={!isOpen}
-        {...(!isOpen ? ({ inert: "" } as unknown as React.HTMLAttributes<HTMLElement>) : {})}
+        {...(!isOpen ? ({ inert: true } as unknown as React.HTMLAttributes<HTMLElement>) : {})}
         className={`fixed inset-y-0 left-0 z-[60] flex flex-col p-4 bg-surface-container-low h-full w-72 rounded-r-xl shadow-md transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
