@@ -134,18 +134,25 @@ body {
 
 /* ─── Utility classes ───────────────────────────────────────────────────────── */
 .canvas-bg {
-  background-color: #faf8f3;
+  background-color: #f0ede6;
 }
 
 .metric-card {
   background-color: #ffffff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 6px 20px rgba(0,0,0,0.06);
+}
+
+/* KPI card — stronger shadow + subtle green tint border for primary metrics */
+.kpi-card {
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(17,86,55,0.10), 0 8px 28px rgba(17,86,55,0.08);
+  border: 1.5px solid rgba(17,86,55,0.12);
 }
 
 .card-hero {
   background-color: #115637;
   color: #ffffff;
-  box-shadow: 0 4px 20px rgba(17,86,55,0.30);
+  box-shadow: 0 4px 24px rgba(17,86,55,0.35);
 }
 
 .sand-card {
@@ -155,6 +162,11 @@ body {
 .sand-card-light {
   background-color: #f5f0e8;
   border: 1px solid #e0d8cc;
+}
+
+/* Page section background — sits between canvas-bg and metric-card */
+.section-bg {
+  background-color: #f7f4ef;
 }
 
 .btn-primary {

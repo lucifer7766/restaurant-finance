@@ -205,7 +205,7 @@ export function DashboardContent() {
       <div className="grid grid-cols-2 gap-3">
 
         {/* รายรับเดือนนี้ */}
-        <div className="metric-card p-5 rounded-2xl">
+        <div className="kpi-card p-5 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
             รายรับเดือนนี้
           </span>
@@ -228,7 +228,7 @@ export function DashboardContent() {
         </div>
 
         {/* รายจ่ายเดือนนี้ */}
-        <div className="metric-card p-5 rounded-2xl">
+        <div className="kpi-card p-5 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
             รายจ่ายเดือนนี้
           </span>
@@ -256,7 +256,7 @@ export function DashboardContent() {
       <div className="grid grid-cols-2 gap-3">
 
         {/* กำไรสุทธิ */}
-        <div className="metric-card p-5 rounded-2xl">
+        <div className="kpi-card p-5 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
             กำไรสุทธิ
           </span>
@@ -287,7 +287,7 @@ export function DashboardContent() {
         </div>
 
         {/* อัตรากำไร */}
-        <div className="metric-card p-5 rounded-2xl">
+        <div className="kpi-card p-5 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
             อัตรากำไร
           </span>
@@ -314,7 +314,7 @@ export function DashboardContent() {
       </div>
 
       {/* ── KPI Row 3: ยอดสะสมสุทธิ (full width) ──────────── */}
-      <div className="metric-card p-5 rounded-2xl">
+      <div className="kpi-card p-5 rounded-2xl">
         <span className="font-label-caps text-label-caps text-on-surface-variant block mb-1">
           เงินสดคงเหลือ (สะสม)
         </span>

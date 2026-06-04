@@ -25,7 +25,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PLU — Finance",
+  title: "Slipless — Finance",
   description: "Restaurant finance dashboard",
 };
 

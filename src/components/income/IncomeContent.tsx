@@ -365,7 +365,7 @@ export function IncomeContent() {
             <span className="font-body-md text-on-surface text-sm">ประวัติการนำเข้า POS</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-on-surface-variant">{importBatches.length} รายงาน</span>
+            <span className="text-xs font-medium text-on-surface-variant">{importBatches.length} รายงาน (ทั้งหมด)</span>
             <span className="material-symbols-outlined text-on-surface-variant text-[16px]">chevron_right</span>
           </div>
         </button>
@@ -385,7 +385,7 @@ export function IncomeContent() {
           <div className="h-14 bg-surface-container-highest rounded w-2/3" />
         </div>
       ) : (
-        <div className="metric-card p-7 rounded-2xl">
+        <div className="kpi-card p-7 rounded-2xl">
           <span className="text-xs font-medium text-on-surface-variant block mb-4 tracking-normal">
             รายรับรวมเดือนนี้
           </span>
@@ -663,7 +663,7 @@ export function IncomeContent() {
               </div>
               <div className="flex-1">
                 <h3 className="font-headline-md text-headline-md text-on-surface">ประวัติการนำเข้า POS</h3>
-                <p className="font-label-caps text-label-caps text-on-surface-variant">{importBatches.length} รายงาน</p>
+                <p className="font-label-caps text-label-caps text-on-surface-variant">{importBatches.length} รายงาน (ทั้งหมด)</p>
               </div>
               <button onClick={() => setHistoryOpen(false)} className="p-2 rounded-xl hover:bg-surface-container transition-colors">
                 <span className="material-symbols-outlined text-on-surface-variant">close</span>

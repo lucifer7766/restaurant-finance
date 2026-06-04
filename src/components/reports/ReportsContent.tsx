@@ -612,7 +612,7 @@ export function ReportsContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {/* รายรับรวม */}
-        <div className="metric-card p-7 rounded-2xl">
+        <div className="kpi-card p-7 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายรับรวม</span>
           <div className="flex items-baseline gap-2 text-primary">
             <span className="text-2xl font-bold opacity-60">฿</span>
@@ -633,7 +633,7 @@ export function ReportsContent() {
         </div>
 
         {/* รายจ่ายรวม */}
-        <div className="metric-card p-7 rounded-2xl">
+        <div className="kpi-card p-7 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายจ่ายรวม</span>
           <div className="flex items-baseline gap-2 text-error">
             <span className="text-2xl font-bold opacity-60">฿</span>

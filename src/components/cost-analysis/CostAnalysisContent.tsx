@@ -205,27 +205,27 @@ export function CostAnalysisContent() {
 
       {/* ── Summary metric row ──────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="metric-card p-5 rounded-2xl">
+        <div className="kpi-card p-5 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">ต้นทุนรวม</span>
           <div className="flex items-baseline gap-1 text-on-surface">
             <span className="text-base font-bold opacity-60">฿</span>
             <span className="text-2xl font-bold font-headline-md tracking-tight">{formatMoney(totalExpense)}</span>
           </div>
         </div>
-        <div className="metric-card p-5 rounded-2xl">
+        <div className="kpi-card p-5 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">รายรับ</span>
           <div className="flex items-baseline gap-1 text-primary">
             <span className="text-base font-bold opacity-60">฿</span>
             <span className="text-2xl font-bold font-headline-md tracking-tight">{formatMoney(totalIncome)}</span>
           </div>
         </div>
-        <div className="metric-card p-5 rounded-2xl">
+        <div className="kpi-card p-5 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">สัดส่วนต้นทุน</span>
           <span className={`text-2xl font-bold font-headline-md tracking-tight ${costRatio > 70 ? "text-error" : "text-primary"}`}>
             {costRatio.toFixed(1)}%
           </span>
         </div>
-        <div className="metric-card p-5 rounded-2xl">
+        <div className="kpi-card p-5 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-2">หมวดค่าใช้จ่าย</span>
           <div className="flex items-baseline gap-1 text-on-surface">
             <span className="text-2xl font-bold font-headline-md">{currentReport.expenseBreakdown.length}</span>
@@ -399,6 +399,22 @@ export function CostAnalysisContent() {
 
 /* ─── TrendLineChart (polyline per category, 6 months) ──────────────────── */
 
+type ChartTooltip = { x: number; y: number; label: string; amount: number; color: string } | null;
+
+function ChartTooltipBox({ tip }: { tip: ChartTooltip }) {
+  if (!tip) return null;
+  return (
+    <div
+      className="pointer-events-none absolute z-10 px-3 py-2 rounded-xl bg-surface-container-highest shadow-lg border border-outline-variant text-xs"
+      style={{ left: tip.x + 10, top: tip.y - 40, transform: "translateY(-50%)" }}
+    >
+      <span className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle" style={{ background: tip.color }} />
+      <span className="font-medium text-on-surface">{tip.label}</span>
+      <span className="ml-2 text-primary font-bold">฿{formatMoney(tip.amount)}</span>
+    </div>
+  );
+}
+
 function TrendLineChart({
   chartData,
   topCategories,
@@ -406,6 +422,8 @@ function TrendLineChart({
   chartData: Array<{ month: string; byCategory: Record<string, number>; total: number }>;
   topCategories: string[];
 }) {
+  const [tip, setTip] = useState<ChartTooltip>(null);
+
   const CHART_H = 380;
   const PAD = { top: 20, right: 20, bottom: 44, left: 64 };
   const innerH = CHART_H - PAD.top - PAD.bottom;
@@ -427,8 +445,18 @@ function TrendLineChart({
     return baseY - (val / paddedMax) * innerH;
   }
 
+  function svgToContainerPx(svgX: number, svgY: number, svg: SVGSVGElement): { x: number; y: number } {
+    const svgRect = svg.getBoundingClientRect();
+    const container = svg.parentElement!.getBoundingClientRect();
+    return {
+      x: (svgX / totalW) * svgRect.width + (svgRect.left - container.left),
+      y: (svgY / CHART_H) * svgRect.height + (svgRect.top - container.top),
+    };
+  }
+
   return (
-    <div className="w-full">
+    <div className="w-full relative" onMouseLeave={() => setTip(null)}>
+      <ChartTooltipBox tip={tip} />
       <svg
         viewBox={`0 0 ${totalW} ${CHART_H}`}
         className="w-full"
@@ -462,15 +490,21 @@ function TrendLineChart({
         {/* lines + dots per category */}
         {topCategories.map((cat, ci) => {
           const color = CATEGORY_COLORS[ci % CATEGORY_COLORS.length];
-          const points = chartData.map((d, i) => ({ x: xFor(i), y: yFor(d.byCategory[cat] ?? 0), v: d.byCategory[cat] ?? 0 }));
+          const points = chartData.map((d, i) => ({ x: xFor(i), y: yFor(d.byCategory[cat] ?? 0), v: d.byCategory[cat] ?? 0, month: d.month }));
           const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
           return (
             <g key={cat}>
               <polyline points={polyline} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
               {points.map((p, i) => (
-                <circle key={i} cx={p.x} cy={p.y} r={4} fill={color}>
-                  <title>{`${cat} ${chartData[i].month}: ฿${formatMoney(p.v)}`}</title>
-                </circle>
+                <circle
+                  key={i} cx={p.x} cy={p.y} r={5} fill={color}
+                  style={{ cursor: "pointer" }}
+                  onMouseEnter={(e) => {
+                    const svg = (e.currentTarget as SVGCircleElement).ownerSVGElement!;
+                    const pos = svgToContainerPx(p.x, p.y, svg);
+                    setTip({ x: pos.x, y: pos.y, label: `${cat} ${THAI_MONTHS[Number(p.month.slice(5)) - 1]}`, amount: p.v, color });
+                  }}
+                />
               ))}
             </g>
           );
@@ -489,6 +523,8 @@ function SixMonthGroupedChart({
   chartData: Array<{ month: string; byCategory: Record<string, number>; total: number }>;
   topCategories: string[];
 }) {
+  const [tip, setTip] = useState<ChartTooltip>(null);
+
   const allValues = chartData.flatMap((d) => topCategories.map((c) => d.byCategory[c] ?? 0));
   const maxVal = Math.max(...allValues, 1);
   const paddedMax = Math.ceil(maxVal / 10000) * 10000 || 10000;
@@ -505,8 +541,20 @@ function SixMonthGroupedChart({
   const yTicks = Array.from({ length: 5 }, (_, i) => (paddedMax / 4) * i);
   const baseY = PAD.top + innerH;
 
+  const THAI_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+
+  function svgToContainerPx(svgX: number, svgY: number, svg: SVGSVGElement): { x: number; y: number } {
+    const svgRect = svg.getBoundingClientRect();
+    const container = svg.parentElement!.getBoundingClientRect();
+    return {
+      x: (svgX / totalW) * svgRect.width + (svgRect.left - container.left),
+      y: (svgY / CHART_H) * svgRect.height + (svgRect.top - container.top),
+    };
+  }
+
   return (
-    <div className="w-full">
+    <div className="w-full relative" onMouseLeave={() => setTip(null)}>
+      <ChartTooltipBox tip={tip} />
       <svg
         viewBox={`0 0 ${totalW} ${CHART_H}`}
         className="w-full"
@@ -539,16 +587,22 @@ function SixMonthGroupedChart({
                 const amount = d.byCategory[cat] ?? 0;
                 const barH = amount > 0 ? Math.max((amount / paddedMax) * innerH, 2) : 0;
                 const x = startX + ci * (barW + groupGap);
+                const color = CATEGORY_COLORS[ci % CATEGORY_COLORS.length];
+                const tipY = baseY - barH;
                 return (
-                  <rect key={cat} x={x} y={baseY - barH} width={barW} height={barH}
-                    fill={CATEGORY_COLORS[ci % CATEGORY_COLORS.length]} rx={1.5}>
-                    <title>{`${cat} ${d.month}: ฿${formatMoney(amount)}`}</title>
-                  </rect>
+                  <rect key={cat} x={x} y={tipY} width={barW} height={barH}
+                    fill={color} rx={1.5} style={{ cursor: "pointer" }}
+                    onMouseEnter={(e) => {
+                      const svg = (e.currentTarget as SVGRectElement).ownerSVGElement!;
+                      const pos = svgToContainerPx(x + barW / 2, tipY, svg);
+                      setTip({ x: pos.x, y: pos.y, label: `${cat} ${THAI_MONTHS[Number(d.month.slice(5)) - 1]}`, amount, color });
+                    }}
+                  />
                 );
               })}
               <text x={groupCenterX} y={baseY + 18} textAnchor="middle"
                 className="fill-zinc-400" style={{ fontSize: "11px" }}>
-                {["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][Number(d.month.slice(5)) - 1]}
+                {THAI_MONTHS[Number(d.month.slice(5)) - 1]}
               </text>
             </g>
           );

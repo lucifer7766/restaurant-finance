@@ -11,7 +11,7 @@ import {
 import { formatSupabaseError } from "@/lib/supabase/errors";
 import { getCategoryLabel, formatPosNote, formatMonthLabel } from "@/lib/utils";
 import { useMonthFilter } from "@/context/MonthFilterContext";
-import { filterTransactionsByMonth } from "@/lib/data";
+import { filterTransactionsByMonth, restaurantName } from "@/lib/data";
 import EditTransactionModal from "./EditTransactionModal";
 import { SwipeableRow } from "@/components/ui/SwipeableRow";
 import * as XLSX from "xlsx";
@@ -247,7 +247,7 @@ export function TransactionsContent() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `restaurant-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `${restaurantName.toLowerCase()}-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -268,7 +268,7 @@ export function TransactionsContent() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
     XLSX.writeFile(
       workbook,
-      `restaurant-transactions-${new Date().toISOString().slice(0, 10)}.xlsx`
+      `${restaurantName.toLowerCase()}-transactions-${new Date().toISOString().slice(0, 10)}.xlsx`
     );
   }
 
@@ -348,7 +348,7 @@ export function TransactionsContent() {
 
       {/* ── Summary cards ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="metric-card p-6 rounded-2xl">
+        <div className="kpi-card p-6 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายรับรวม</span>
           <div className="flex items-baseline gap-1.5 text-primary">
             <span className="text-xl font-bold opacity-60">฿</span>
@@ -357,7 +357,7 @@ export function TransactionsContent() {
             </span>
           </div>
         </div>
-        <div className="metric-card p-6 rounded-2xl">
+        <div className="kpi-card p-6 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายจ่ายรวม</span>
           <div className="flex items-baseline gap-1.5 text-error">
             <span className="text-xl font-bold opacity-60">฿</span>
@@ -366,7 +366,7 @@ export function TransactionsContent() {
             </span>
           </div>
         </div>
-        <div className="metric-card p-6 rounded-2xl">
+        <div className="kpi-card p-6 rounded-2xl">
           <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">กำไรสุทธิ</span>
           <div className={`flex items-baseline gap-1.5 ${summaryNet >= 0 ? "text-primary" : "text-error"}`}>
             <span className="text-xl font-bold opacity-60">฿</span>

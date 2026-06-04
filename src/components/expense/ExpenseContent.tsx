@@ -293,6 +293,7 @@ export function ExpenseContent() {
           {scanning ? "กำลังสแกน..." : "ถ่ายรูปใบเสร็จ"}
         </label>
       </div>
+      <p className="text-xs text-on-surface-variant -mt-1 px-1">ถ่ายรูปใบเสร็จ = สแกนใบเสร็จค่าใช้จ่าย · สแกนสลิปธนาคาร = อ่านสลิปโอนเงิน</p>
       <label className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-outline-variant font-body-md text-on-surface-variant cursor-pointer hover:bg-surface-container hover:border-primary hover:text-primary transition-all ${slipScanning ? "opacity-60 pointer-events-none" : ""}`}>
         <input
           ref={slipFileRef}
@@ -423,7 +424,7 @@ export function ExpenseContent() {
           <div className="h-14 bg-surface-container-highest rounded w-2/3" />
         </div>
       ) : (
-        <div className="metric-card p-7 rounded-2xl">
+        <div className="kpi-card p-7 rounded-2xl">
           <span className="text-xs font-medium text-on-surface-variant block mb-4 tracking-normal">
             รวมรายจ่ายทั้งหมด
           </span>

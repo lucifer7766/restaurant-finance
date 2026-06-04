@@ -20,7 +20,7 @@ export function TopAppBar({ onToggleDrawer, title }: TopAppBarProps) {
   const pageLabel = title ? (PAGE_TITLES[title] ?? title) : null;
 
   return (
-    <header className="fixed top-0 w-full z-50 flex justify-between items-center px-container-padding-mobile py-4 bg-surface shadow-sm">
+    <header className="fixed top-0 w-full z-50 flex justify-between items-center px-container-padding-mobile py-3 bg-surface border-b border-outline-variant/60" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.07)" }}>
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleDrawer}
@@ -29,15 +29,20 @@ export function TopAppBar({ onToggleDrawer, title }: TopAppBarProps) {
         >
           <span className="material-symbols-outlined text-on-surface">menu</span>
         </button>
-        <div>
-          <h1 className="font-headline-md text-headline-md font-bold text-primary leading-tight">
-            PLU
-          </h1>
-          {pageLabel && (
-            <p className="font-label-caps text-label-caps text-on-surface-variant leading-none">
-              {pageLabel}
-            </p>
-          )}
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-on-primary text-[18px]">restaurant</span>
+          </div>
+          <div>
+            <h1 className="text-[17px] font-extrabold text-primary leading-tight tracking-tight" style={{ fontFamily: "var(--font-manrope)" }}>
+              Slipless
+            </h1>
+            {pageLabel && (
+              <p className="font-label-caps text-label-caps text-on-surface-variant leading-none">
+                {pageLabel}
+              </p>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-3">

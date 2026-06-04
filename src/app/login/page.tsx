@@ -32,24 +32,35 @@ export default function LoginPage() {
   return (
     <div className="canvas-bg min-h-screen flex items-center justify-center p-4">
       <div
-        className="metric-card w-full max-w-sm p-8 rounded-2xl"
-        style={{ border: "1px solid var(--color-outline-variant)" }}
+        className="kpi-card w-full max-w-sm p-8 rounded-2xl"
       >
-        <h1
-          className="text-2xl font-bold mb-2"
-          style={{ color: "var(--color-on-surface)", fontFamily: "var(--font-manrope)" }}
-        >
-          PLU Finance
-        </h1>
+        {/* Brand mark */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--color-primary)" }}>
+            <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-primary)" }}>restaurant</span>
+          </div>
+          <div>
+            <h1
+              className="text-xl font-extrabold leading-tight tracking-tight"
+              style={{ color: "var(--color-primary)", fontFamily: "var(--font-manrope)" }}
+            >
+              Slipless
+            </h1>
+            <p className="text-xs font-medium" style={{ color: "var(--color-on-surface-variant)" }}>
+              Restaurant Finance
+            </p>
+          </div>
+        </div>
+
         <p
-          className="text-sm mb-8"
+          className="text-sm mb-6"
           style={{ color: "var(--color-on-surface-variant)" }}
         >
           เข้าสู่ระบบเพื่อดำเนินการต่อ
         </p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             <label
               htmlFor="email"
               className="text-sm font-medium"
@@ -64,16 +75,16 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="rounded-lg px-3 py-2 text-sm outline-none"
+              className="rounded-xl px-3 py-2.5 text-sm outline-none transition-colors"
               style={{
-                background: "var(--color-surface-container)",
+                background: "var(--color-surface-container-low)",
                 color: "var(--color-on-surface)",
-                border: "1px solid var(--color-outline-variant)",
+                border: "1.5px solid var(--color-outline-variant)",
               }}
             />
           </div>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             <label
               htmlFor="password"
               className="text-sm font-medium"
@@ -88,11 +99,11 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
-              className="rounded-lg px-3 py-2 text-sm outline-none"
+              className="rounded-xl px-3 py-2.5 text-sm outline-none transition-colors"
               style={{
-                background: "var(--color-surface-container)",
+                background: "var(--color-surface-container-low)",
                 color: "var(--color-on-surface)",
-                border: "1px solid var(--color-outline-variant)",
+                border: "1.5px solid var(--color-outline-variant)",
               }}
             />
           </div>
@@ -118,7 +129,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isPending}
-            className="mt-2 rounded-lg py-2.5 text-sm font-semibold transition-opacity disabled:opacity-60"
+            className="mt-2 rounded-xl py-3 text-sm font-semibold transition-opacity disabled:opacity-60"
             style={{
               background: "var(--color-primary)",
               color: "var(--color-on-primary)",
