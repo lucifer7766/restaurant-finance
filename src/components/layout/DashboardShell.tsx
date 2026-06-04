@@ -16,7 +16,7 @@ export function DashboardShell({ title, children }: DashboardShellProps) {
     <div className="canvas-bg min-h-screen">
       <TopAppBar onToggleDrawer={() => setDrawerOpen((v) => !v)} title={title} />
       <AppSidebar isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      <main className="max-w-[1280px] mx-auto px-container-padding-mobile md:px-container-padding-desktop pt-24 pb-8">
+      <main className="max-w-[1280px] mx-auto px-container-padding-mobile md:px-container-padding-desktop pt-28 pb-8">
         {children}
       </main>
     </div>

@@ -162,40 +162,73 @@ export function DashboardContent() {
   return (
     <div className="space-y-4">
 
-      {/* ── Page header ────────────────────────────────────── */}
-      <div>
-        <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-0.5">
-          สรุปภาพรวมธุรกิจ
-        </h2>
-        <p className="font-label-caps text-label-caps text-on-surface-variant">
-          ข้อมูลล่าสุดประจำเดือนนี้ · {monthLabel}
-        </p>
-      </div>
+      {/* ── HERO SECTION ───────────────────────────────────── */}
+      <div className="card-hero rounded-2xl p-6">
+        {/* Top row: label + alert badge */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p style={{ fontSize: "11px", fontWeight: 600, color: "rgba(255,255,255,0.65)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              ภาพรวมธุรกิจ · {monthLabel}
+            </p>
+          </div>
+          <span
+            className="flex items-center gap-1 px-3 py-1 rounded-full"
+            style={{ background: "rgba(255,255,255,0.18)", fontSize: "11px", color: "rgba(255,255,255,0.9)", fontWeight: 600 }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: "14px", color: "#acefc6" }}>{alert.icon}</span>
+            {revenueGrowth > 0 ? "กำลังเติบโต" : revenueGrowth < 0 ? "ควรเพิ่มยอด" : "ทรงตัว"}
+          </span>
+        </div>
 
-      {/* ── Action buttons ─────────────────────────────────── */}
-      <div className="flex gap-3">
+        {/* Main income figure */}
+        <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.60)", marginBottom: "4px" }}>รายรับเดือนนี้</p>
+        <div className="flex items-baseline gap-2 mb-2">
+          <span style={{ fontSize: "28px", fontWeight: 700, color: "rgba(255,255,255,0.70)" }}>฿</span>
+          <span style={{ fontFamily: "var(--font-manrope)", fontSize: "52px", fontWeight: 800, color: "#ffffff", lineHeight: 1, letterSpacing: "-0.02em" }}>
+            {report.totalIncome.toLocaleString("th-TH")}
+          </span>
+        </div>
+
+        {/* Income trend */}
+        {revenueGrowth !== 0 && prevReport.totalIncome > 0 && (
+          <div className="flex items-center gap-1.5 mb-5">
+            <span className="material-symbols-outlined" style={{ fontSize: "16px", color: revenueGrowth > 0 ? "#acefc6" : "#fca5a5" }}>
+              {revenueGrowth > 0 ? "trending_up" : "trending_down"}
+            </span>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: revenueGrowth > 0 ? "#acefc6" : "#fca5a5" }}>
+              {revenueGrowth > 0 ? "+" : ""}{revenueGrowth.toFixed(1)}% จากเดือนก่อน
+            </span>
+          </div>
+        )}
+
+        {/* Quick stats row */}
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          {[
+            { label: "รายจ่าย", value: `฿${report.totalExpenses.toLocaleString("th-TH")}`, color: "#fca5a5" },
+            { label: "กำไรสุทธิ", value: `฿${Math.abs(report.netProfit).toLocaleString("th-TH")}`, color: report.netProfit >= 0 ? "#acefc6" : "#fca5a5" },
+            { label: "อัตรากำไร", value: `${report.profitMargin.toFixed(1)}%`, color: "#acefc6" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.12)" }}>
+              <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.60)", marginBottom: "4px", fontWeight: 500 }}>{label}</p>
+              <p style={{ fontSize: "15px", fontWeight: 700, color, lineHeight: 1 }}>{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Compare button inside hero */}
         <button
           onClick={() => setShowCompare(true)}
-          className="btn-secondary flex-1"
-          aria-label="เปรียบเทียบเดือน"
+          className="mt-4 flex items-center gap-2 px-4 py-2 rounded-xl w-full justify-center"
+          style={{ background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.9)", fontSize: "13px", fontWeight: 600 }}
         >
-          <span className="material-symbols-outlined text-[18px]">compare_arrows</span>
+          <span className="material-symbols-outlined text-[16px]">compare_arrows</span>
           เปรียบเทียบเดือน
         </button>
       </div>
 
-      {/* ── Alert Banner ───────────────────────────────────── */}
-      <div className="sand-card px-4 py-3 rounded-xl flex items-center gap-3">
-        <span className={`material-symbols-outlined text-[20px] shrink-0 ${alert.color}`}>
-          {alert.icon}
-        </span>
-        <p className="flex-1 font-body-md text-on-surface text-sm">{alert.message}</p>
-        <span className="material-symbols-outlined text-[18px] text-on-surface-variant shrink-0">chevron_right</span>
-      </div>
-
       {/* ── Error banner ───────────────────────────────────── */}
       {error && (
-        <div className="sand-card p-4 rounded-xl flex items-center gap-3 border-l-4 border-error">
+        <div className="metric-card p-4 rounded-xl flex items-center gap-3 border-l-4 border-error">
           <span className="material-symbols-outlined text-error">error</span>
           <p className="font-body-md text-on-surface">{error}</p>
         </div>
@@ -206,12 +239,15 @@ export function DashboardContent() {
 
         {/* รายรับเดือนนี้ */}
         <div className="kpi-card p-5 rounded-2xl">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-            รายรับเดือนนี้
-          </span>
-          <div className="flex items-baseline gap-1 text-primary">
+          <div className="flex items-center justify-between mb-3">
+            <span style={{ fontSize: "11px", fontWeight: 600, color: "#707972", letterSpacing: "0.03em" }}>รายรับ</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(17,86,55,0.12)" }}>
+              <span className="material-symbols-outlined text-[16px]" style={{ color: "#115637" }}>payments</span>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1" style={{ color: "#115637" }}>
             <span className="text-base font-bold opacity-60">฿</span>
-            <span className="text-2xl font-bold font-headline-md tracking-tight leading-none">
+            <span className="text-2xl font-bold tracking-tight leading-none" style={{ fontFamily: "var(--font-manrope)" }}>
               {report.totalIncome.toLocaleString("th-TH")}
             </span>
           </div>
@@ -220,21 +256,24 @@ export function DashboardContent() {
               <span className="material-symbols-outlined text-[14px]">
                 {revenueGrowth > 0 ? "trending_up" : "trending_down"}
               </span>
-              <span className="font-label-caps text-label-caps" style={{ fontSize: "10px" }}>
-                {revenueGrowth > 0 ? "+" : ""}{revenueGrowth.toFixed(1)}% เทียบเดือนก่อน
+              <span style={{ fontSize: "10px", fontWeight: 600 }}>
+                {revenueGrowth > 0 ? "+" : ""}{revenueGrowth.toFixed(1)}%
               </span>
             </div>
           )}
         </div>
 
         {/* รายจ่ายเดือนนี้ */}
-        <div className="kpi-card p-5 rounded-2xl">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-            รายจ่ายเดือนนี้
-          </span>
+        <div className="kpi-card p-5 rounded-2xl" style={{ borderTopColor: "#ba1a1a" }}>
+          <div className="flex items-center justify-between mb-3">
+            <span style={{ fontSize: "11px", fontWeight: 600, color: "#707972", letterSpacing: "0.03em" }}>รายจ่าย</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(186,26,26,0.10)" }}>
+              <span className="material-symbols-outlined text-[16px]" style={{ color: "#ba1a1a" }}>receipt_long</span>
+            </div>
+          </div>
           <div className="flex items-baseline gap-1 text-error">
             <span className="text-base font-bold opacity-60">฿</span>
-            <span className="text-2xl font-bold font-headline-md tracking-tight leading-none">
+            <span className="text-2xl font-bold tracking-tight leading-none" style={{ fontFamily: "var(--font-manrope)" }}>
               {report.totalExpenses.toLocaleString("th-TH")}
             </span>
           </div>
@@ -243,8 +282,8 @@ export function DashboardContent() {
               <span className="material-symbols-outlined text-[14px]">
                 {expenseGrowth > 0 ? "trending_up" : "trending_down"}
               </span>
-              <span className="font-label-caps text-label-caps" style={{ fontSize: "10px" }}>
-                {expenseGrowth > 0 ? "+" : ""}{expenseGrowth.toFixed(1)}% เทียบเดือนก่อน
+              <span style={{ fontSize: "10px", fontWeight: 600 }}>
+                {expenseGrowth > 0 ? "+" : ""}{expenseGrowth.toFixed(1)}%
               </span>
             </div>
           )}
@@ -256,30 +295,35 @@ export function DashboardContent() {
       <div className="grid grid-cols-2 gap-3">
 
         {/* กำไรสุทธิ */}
-        <div className="kpi-card p-5 rounded-2xl">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-            กำไรสุทธิ
-          </span>
-          <div className={`flex items-baseline gap-1 ${report.netProfit >= 0 ? "text-on-surface" : "text-error"}`}>
+        <div className="kpi-card p-5 rounded-2xl" style={{ borderTopColor: report.netProfit >= 0 ? "#115637" : "#ba1a1a" }}>
+          <div className="flex items-center justify-between mb-3">
+            <span style={{ fontSize: "11px", fontWeight: 600, color: "#707972", letterSpacing: "0.03em" }}>กำไรสุทธิ</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: report.netProfit >= 0 ? "rgba(17,86,55,0.12)" : "rgba(186,26,26,0.10)" }}>
+              <span className="material-symbols-outlined text-[16px]" style={{ color: report.netProfit >= 0 ? "#115637" : "#ba1a1a" }}>
+                {report.netProfit >= 0 ? "savings" : "warning"}
+              </span>
+            </div>
+          </div>
+          <div className={`flex items-baseline gap-1 ${report.netProfit >= 0 ? "text-primary" : "text-error"}`}>
             <span className="text-base font-bold opacity-60">฿</span>
-            <span className="text-2xl font-bold font-headline-md tracking-tight leading-none">
+            <span className="text-2xl font-bold tracking-tight leading-none" style={{ fontFamily: "var(--font-manrope)" }}>
               {Math.abs(report.netProfit).toLocaleString("th-TH")}
             </span>
           </div>
           {report.netProfit < 0 && (
-            <p className="mt-1 font-label-caps text-label-caps text-error" style={{ fontSize: "10px" }}>ขาดทุน</p>
+            <p className="mt-1 text-error" style={{ fontSize: "10px", fontWeight: 600 }}>ขาดทุน</p>
           )}
           {(() => {
             if (prevReport.totalIncome === 0 && prevReport.totalExpenses === 0) return null;
             const prev = prevReport.netProfit;
-            if (prev === 0) return <p className="mt-2 font-label-caps text-label-caps text-on-surface-variant" style={{ fontSize: "10px" }}>ไม่มีข้อมูลเดือนก่อน</p>;
+            if (prev === 0) return null;
             const pct = ((report.netProfit - prev) / Math.abs(prev)) * 100;
             const up = pct > 0;
             return (
               <div className={`mt-2 flex items-center gap-1 ${up ? "text-primary" : "text-error"}`}>
                 <span className="material-symbols-outlined text-[14px]">{up ? "trending_up" : "trending_down"}</span>
-                <span className="font-label-caps text-label-caps" style={{ fontSize: "10px" }}>
-                  {up ? "+" : ""}{pct.toFixed(1)}% เทียบเดือนก่อน
+                <span style={{ fontSize: "10px", fontWeight: 600 }}>
+                  {up ? "+" : ""}{pct.toFixed(1)}%
                 </span>
               </div>
             );
@@ -288,10 +332,13 @@ export function DashboardContent() {
 
         {/* อัตรากำไร */}
         <div className="kpi-card p-5 rounded-2xl">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">
-            อัตรากำไร
-          </span>
-          <span className="text-2xl font-bold font-headline-md text-on-surface tracking-tight">
+          <div className="flex items-center justify-between mb-3">
+            <span style={{ fontSize: "11px", fontWeight: 600, color: "#707972", letterSpacing: "0.03em" }}>อัตรากำไร</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(17,86,55,0.12)" }}>
+              <span className="material-symbols-outlined text-[16px]" style={{ color: "#115637" }}>percent</span>
+            </div>
+          </div>
+          <span className="text-2xl font-bold tracking-tight" style={{ fontFamily: "var(--font-manrope)", color: report.profitMargin >= 15 ? "#115637" : report.profitMargin >= 0 ? "#1b1c19" : "#ba1a1a" }}>
             {report.profitMargin.toFixed(1)}%
           </span>
           {(() => {

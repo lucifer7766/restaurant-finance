@@ -123,18 +123,21 @@ export function CostAnalysisContent() {
       )}
 
       {/* ── Header ─────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-0.5">
+      <div className="page-header-card rounded-2xl px-5 py-4 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg,#703f00 0%,#925401 100%)" }}>
+          <span className="material-symbols-outlined text-white text-[22px]">analytics</span>
+        </div>
+        <div className="flex-1">
+          <p style={{ fontSize: "11px", fontWeight: 600, color: "#703f00", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px" }}>วิเคราะห์ต้นทุน</p>
+          <h2 style={{ fontFamily: "var(--font-manrope)", fontSize: "20px", fontWeight: 800, color: "#1b1c19", lineHeight: 1.2 }}>
             วิเคราะห์ต้นทุน
           </h2>
-          <p className="font-label-caps text-label-caps text-on-surface-variant">
-            สรุปข้อมูลค่าใช้จ่ายและข้อเสนอแนะประจำเดือน {formatMonthLabel(selectedMonth)}
-          </p>
+          <p style={{ fontSize: "12px", color: "#707972", marginTop: "2px" }}>สรุปค่าใช้จ่ายและข้อเสนอแนะ · {formatMonthLabel(selectedMonth)}</p>
         </div>
         <button
           onClick={() => setBudgetOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary-container text-on-primary-container rounded-xl font-body-md hover:opacity-90 transition-all shrink-0"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-body-md hover:opacity-90 transition-all shrink-0"
+          style={{ background: "#115637", color: "#ffffff" }}
         >
           <span className="material-symbols-outlined text-[18px]">savings</span>
           ตั้งงบ

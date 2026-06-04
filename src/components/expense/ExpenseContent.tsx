@@ -261,16 +261,17 @@ export function ExpenseContent() {
     <div className="space-y-4">
 
       {/* ── Header ─────────────────────────────────────────── */}
-      <div>
-        <p className="text-xs font-medium text-on-surface-variant tracking-normal mb-1">
-          แดชบอร์ดรายจ่าย
-        </p>
-        <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">
-          รายงานรายจ่ายประจำเดือน
-        </h2>
-        <p className="font-body-md text-on-surface-variant">
-          ตรวจสอบและจัดการต้นทุนของ PLU Restaurant อย่างเป็นระบบ
-        </p>
+      <div className="page-header-card rounded-2xl px-5 py-4 flex items-center gap-4" style={{ borderLeftColor: "#ba1a1a" }}>
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg,#ba1a1a 0%,#d63030 100%)" }}>
+          <span className="material-symbols-outlined text-white text-[22px]">receipt_long</span>
+        </div>
+        <div>
+          <p style={{ fontSize: "11px", fontWeight: 600, color: "#ba1a1a", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px" }}>รายจ่าย</p>
+          <h2 style={{ fontFamily: "var(--font-manrope)", fontSize: "20px", fontWeight: 800, color: "#1b1c19", lineHeight: 1.2 }}>
+            รายงานรายจ่ายประจำเดือน
+          </h2>
+          <p style={{ fontSize: "12px", color: "#707972", marginTop: "2px" }}>ตรวจสอบและจัดการต้นทุนอย่างเป็นระบบ</p>
+        </div>
       </div>
 
       {/* ── Action buttons ─────────────────────────────────── */}
@@ -424,10 +425,13 @@ export function ExpenseContent() {
           <div className="h-14 bg-surface-container-highest rounded w-2/3" />
         </div>
       ) : (
-        <div className="kpi-card p-7 rounded-2xl">
-          <span className="text-xs font-medium text-on-surface-variant block mb-4 tracking-normal">
-            รวมรายจ่ายทั้งหมด
-          </span>
+        <div className="kpi-card p-6 rounded-2xl" style={{ borderTopColor: "#ba1a1a" }}>
+          <div className="flex items-center justify-between mb-4">
+            <span style={{ fontSize: "11px", fontWeight: 600, color: "#707972", letterSpacing: "0.03em" }}>รวมรายจ่ายทั้งหมด</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(186,26,26,0.10)" }}>
+              <span className="material-symbols-outlined text-[20px]" style={{ color: "#ba1a1a" }}>receipt_long</span>
+            </div>
+          </div>
           <div className="flex items-baseline gap-2 text-error">
             <span className="text-4xl font-bold opacity-50">฿</span>
             <span className="font-display-currency text-display-currency tracking-tight leading-none">

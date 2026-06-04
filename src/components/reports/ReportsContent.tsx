@@ -329,18 +329,24 @@ export function ReportsContent() {
       )}
 
       {/* ── Header ─────────────────────────────────────────── */}
-      <div>
-        <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">
-          รายงานกำไรขาดทุน
-        </h2>
-        <p className="font-body-md text-on-surface-variant">
-          สรุปผลประกอบการประจำเดือน {formatMonthLabel(selectedMonth)}
-          {!growthIncome.noData && (
-            <span className={`ml-2 font-semibold text-sm ${growthIncome.up ? "text-primary" : "text-error"}`}>
-              · {growthIncome.text.replace(" เทียบเดือนก่อน", "")} จากเดือนที่แล้ว
-            </span>
-          )}
-        </p>
+      <div className="page-header-card rounded-2xl px-5 py-4 flex items-center gap-4" style={{ borderLeftColor: "#115637" }}>
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg,#115637 0%,#1a7a4e 100%)" }}>
+          <span className="material-symbols-outlined text-white text-[22px]">leaderboard</span>
+        </div>
+        <div className="flex-1">
+          <p style={{ fontSize: "11px", fontWeight: 600, color: "#115637", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px" }}>รายงาน</p>
+          <h2 style={{ fontFamily: "var(--font-manrope)", fontSize: "20px", fontWeight: 800, color: "#1b1c19", lineHeight: 1.2 }}>
+            รายงานกำไรขาดทุน
+          </h2>
+          <p style={{ fontSize: "12px", marginTop: "2px" }}>
+            <span style={{ color: "#707972" }}>สรุปผลประกอบการ {formatMonthLabel(selectedMonth)}</span>
+            {!growthIncome.noData && (
+              <span style={{ marginLeft: "6px", fontWeight: 700, color: growthIncome.up ? "#115637" : "#ba1a1a" }}>
+                · {growthIncome.text.replace(" เทียบเดือนก่อน", "")} จากเดือนที่แล้ว
+              </span>
+            )}
+          </p>
+        </div>
       </div>
 
       {/* ── Export buttons ──────────────────────────────────── */}

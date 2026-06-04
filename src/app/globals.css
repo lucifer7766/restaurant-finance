@@ -133,26 +133,38 @@ body {
 }
 
 /* ─── Utility classes ───────────────────────────────────────────────────────── */
+
+/* App canvas — warm gradient background so the page has visible depth */
 .canvas-bg {
-  background-color: #f0ede6;
+  background: linear-gradient(160deg, #e9e4da 0%, #ddd8ce 50%, #e4dfd5 100%);
+  min-height: 100vh;
 }
 
+/* Regular content card — white, subtle shadow */
 .metric-card {
   background-color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 6px 20px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.07);
 }
 
-/* KPI card — stronger shadow + subtle green tint border for primary metrics */
+/* KPI primary card — white + 4px green top accent + stronger shadow */
 .kpi-card {
   background-color: #ffffff;
-  box-shadow: 0 2px 8px rgba(17,86,55,0.10), 0 8px 28px rgba(17,86,55,0.08);
-  border: 1.5px solid rgba(17,86,55,0.12);
+  border-top: 4px solid #115637;
+  box-shadow: 0 4px 12px rgba(17,86,55,0.14), 0 12px 32px rgba(17,86,55,0.10);
 }
 
+/* Dashboard Hero — full dark green */
 .card-hero {
-  background-color: #115637;
+  background: linear-gradient(135deg, #115637 0%, #1a7a4e 100%);
   color: #ffffff;
-  box-shadow: 0 4px 24px rgba(17,86,55,0.35);
+  box-shadow: 0 8px 32px rgba(17,86,55,0.40), 0 2px 8px rgba(17,86,55,0.25);
+}
+
+/* Page header card — cream background, left green accent bar */
+.page-header-card {
+  background-color: #ffffff;
+  border-left: 5px solid #115637;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
 }
 
 .sand-card {
