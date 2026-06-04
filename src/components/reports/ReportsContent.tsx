@@ -9,7 +9,7 @@ import {
   filterTransactionsByMonth,
   type RecentTransaction,
 } from "@/lib/data";
-import { formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote } from "@/lib/utils";
+import { formatMonthLabel, getCategoryLabel } from "@/lib/utils";
 
 const THAI_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
@@ -97,11 +97,6 @@ export function ReportsContent() {
 
   const prevReport = useMemo(
     () => getMonthlyReportFromTransactions(transactions, getPrevMonthKey(selectedMonth)),
-    [transactions, selectedMonth]
-  );
-
-  const recentTxns = useMemo(
-    () => filterTransactionsByMonth(transactions, selectedMonth).slice(0, 10),
     [transactions, selectedMonth]
   );
 
@@ -328,7 +323,7 @@ export function ReportsContent() {
         </div>
       )}
 
-      {/* ── Header ─────────────────────────────────────────── */}
+      {/* ── Header + Export buttons (desktop right) ─────────── */}
       <div className="page-header-card rounded-2xl px-5 py-4 flex items-center gap-4" style={{ borderLeftColor: "#115637" }}>
         <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg,#115637 0%,#1a7a4e 100%)" }}>
           <span className="material-symbols-outlined text-white text-[22px]">leaderboard</span>
@@ -347,24 +342,138 @@ export function ReportsContent() {
             )}
           </p>
         </div>
+        {/* Export buttons — desktop only */}
+        <div className="hidden md:flex flex-col gap-2 shrink-0 print:hidden">
+          <button onClick={exportAccountant} className="btn-primary px-4 py-2 text-sm">
+            <span className="material-symbols-outlined text-[16px]">table_view</span>
+            Export (.xlsx)
+          </button>
+          <button onClick={exportPDF} className="btn-secondary px-4 py-2 text-sm">
+            <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+            พิมพ์ / PDF
+          </button>
+        </div>
       </div>
 
-      {/* ── Export buttons ──────────────────────────────────── */}
-      <div className="flex flex-wrap gap-2 justify-end print:hidden">
-        <button
-          onClick={exportAccountant}
-          className="btn-primary px-5 py-2.5 text-sm"
-        >
-          <span className="material-symbols-outlined text-[18px]">table_view</span>
-          Export สรุปนักบัญชี (.xlsx)
-        </button>
-        <button
-          onClick={exportPDF}
-          className="btn-secondary px-5 py-2.5 text-sm"
-        >
-          <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
-          พิมพ์ / บันทึก PDF
-        </button>
+      {/* ── KPI Summary ─────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* รายรับรวม */}
+        <div className="kpi-card p-7 rounded-2xl">
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายรับรวม</span>
+          <div className="flex items-baseline gap-2 text-primary">
+            <span className="text-2xl font-bold opacity-60">฿</span>
+            <span className="font-display-currency text-display-currency tracking-tight leading-none">
+              {formatMoney(income)}
+            </span>
+          </div>
+          {growthIncome.noData ? (
+            <p className="mt-3 font-label-caps text-label-caps text-on-surface-variant">ไม่มีข้อมูลเดือนก่อน</p>
+          ) : (
+            <div className={`mt-3 flex items-center gap-1.5 ${growthIncome.up ? "text-primary" : "text-error"}`}>
+              <span className="material-symbols-outlined text-[16px]">
+                {growthIncome.up ? "trending_up" : "trending_down"}
+              </span>
+              <span className="font-label-caps text-label-caps">{growthIncome.text}</span>
+            </div>
+          )}
+        </div>
+
+        {/* รายจ่ายรวม */}
+        <div className="kpi-card p-7 rounded-2xl" style={{ borderTopColor: "#ba1a1a" }}>
+          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายจ่ายรวม</span>
+          <div className="flex items-baseline gap-2 text-error">
+            <span className="text-2xl font-bold opacity-60">฿</span>
+            <span className="font-display-currency text-display-currency tracking-tight leading-none">
+              {formatMoney(expense)}
+            </span>
+          </div>
+          {growthExpense.noData ? (
+            <p className="mt-3 font-label-caps text-label-caps text-on-surface-variant">ไม่มีข้อมูลเดือนก่อน</p>
+          ) : (
+            <div className={`mt-3 flex items-center gap-1.5 ${growthExpense.up ? "text-error" : "text-primary"}`}>
+              <span className="material-symbols-outlined text-[16px]">
+                {growthExpense.up ? "trending_up" : "trending_down"}
+              </span>
+              <span className="font-label-caps text-label-caps">{growthExpense.text}</span>
+            </div>
+          )}
+        </div>
+
+        {/* กำไรสุทธิ — full width */}
+        <div className={`p-7 rounded-2xl md:col-span-2 ${profit >= 0 ? "card-hero" : "metric-card"}`}>
+          <span className={`font-label-caps text-label-caps block mb-3 ${profit >= 0 ? "text-green-200" : "text-on-surface-variant"}`}>
+            กำไรสุทธิ
+          </span>
+          <div className={`flex items-baseline gap-2 ${profit >= 0 ? "text-white" : "text-error"}`}>
+            <span className="text-2xl font-bold opacity-70">฿</span>
+            <span className="font-display-currency text-display-currency tracking-tight leading-none">
+              {formatMoney(Math.abs(profit))}
+            </span>
+          </div>
+          <div className={`mt-3 flex items-center gap-2 ${profit >= 0 ? "text-green-200" : "text-error"}`}>
+            <span className="material-symbols-outlined text-[16px]">
+              {profit >= 0 ? "check_circle" : "cancel"}
+            </span>
+            <span className="font-label-caps text-label-caps">
+              {profit >= 0 ? `อัตรากำไร ${margin.toFixed(1)}%` : "ขาดทุน"}
+            </span>
+          </div>
+          {growthProfit.noData ? (
+            <p className="mt-2 font-label-caps text-label-caps opacity-60" style={{ color: profit >= 0 ? "#bbf7d0" : undefined }}>ไม่มีข้อมูลเดือนก่อน</p>
+          ) : (
+            <div className={`mt-2 flex items-center gap-1.5 ${growthProfit.up ? "text-green-200" : "text-red-300"}`}>
+              <span className="material-symbols-outlined text-[14px]">
+                {growthProfit.up ? "trending_up" : "trending_down"}
+              </span>
+              <span className="font-label-caps text-label-caps text-xs">{growthProfit.text}</span>
+            </div>
+          )}
+          {!growthMargin.noData && (
+            <div className={`mt-1 flex items-center gap-1 ${growthMargin.up ? "text-green-200" : "text-red-300"}`}>
+              <span className="font-label-caps text-xs opacity-80">อัตรากำไร {growthMargin.text}</span>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* ── วิเคราะห์โครงสร้างต้นทุน ──────────────────────── */}
+      <div className="metric-card p-7 rounded-2xl">
+        <h3 className="font-headline-md text-headline-md text-on-surface mb-5">
+          วิเคราะห์โครงสร้างต้นทุน
+        </h3>
+        <div className="space-y-4">
+          <ProgressRow label="รายรับ" amount={income} total={income} colorClass="bg-primary" />
+          <ProgressRow label="รายจ่าย" amount={expense} total={income} colorClass="bg-error" />
+          <ProgressRow label="กำไรสุทธิ" amount={Math.max(profit, 0)} total={income} colorClass="bg-primary-container" />
+        </div>
+      </div>
+
+      {/* ── AI Summary ─────────────────────────────────────── */}
+      <div className="metric-card p-7 rounded-2xl">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center">
+            <span className="material-symbols-outlined text-on-primary-container text-[20px]">auto_awesome</span>
+          </div>
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface">วิเคราะห์อัตโนมัติ</h3>
+            <p className="font-label-caps text-label-caps text-on-surface-variant">วิเคราะห์จากเกณฑ์ข้อมูล</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {[
+            { icon: "trending_up", text: aiSummary.profitText },
+            { icon: "pie_chart", text: aiSummary.marginText },
+            { icon: "receipt_long", text: aiSummary.topExpenseText },
+            { icon: "lightbulb", text: aiSummary.advice },
+          ].map(({ icon, text }) => (
+            <div key={icon} className="flex items-start gap-3 p-4 bg-surface-container-low rounded-xl">
+              <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">{icon}</span>
+              <p className="font-body-md text-on-surface">{text}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── Cash Flow Forecast ─────────────────────────────── */}
@@ -614,127 +723,6 @@ export function ReportsContent() {
         )}
       </div>
 
-      {/* ── Metric cards ───────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        {/* รายรับรวม */}
-        <div className="kpi-card p-7 rounded-2xl">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายรับรวม</span>
-          <div className="flex items-baseline gap-2 text-primary">
-            <span className="text-2xl font-bold opacity-60">฿</span>
-            <span className="font-display-currency text-display-currency tracking-tight leading-none">
-              {formatMoney(income)}
-            </span>
-          </div>
-          {growthIncome.noData ? (
-            <p className="mt-3 font-label-caps text-label-caps text-on-surface-variant">ไม่มีข้อมูลเดือนก่อน</p>
-          ) : (
-            <div className={`mt-3 flex items-center gap-1.5 ${growthIncome.up ? "text-primary" : "text-error"}`}>
-              <span className="material-symbols-outlined text-[16px]">
-                {growthIncome.up ? "trending_up" : "trending_down"}
-              </span>
-              <span className="font-label-caps text-label-caps">{growthIncome.text}</span>
-            </div>
-          )}
-        </div>
-
-        {/* รายจ่ายรวม */}
-        <div className="kpi-card p-7 rounded-2xl">
-          <span className="font-label-caps text-label-caps text-on-surface-variant block mb-3">รายจ่ายรวม</span>
-          <div className="flex items-baseline gap-2 text-error">
-            <span className="text-2xl font-bold opacity-60">฿</span>
-            <span className="font-display-currency text-display-currency tracking-tight leading-none">
-              {formatMoney(expense)}
-            </span>
-          </div>
-          {growthExpense.noData ? (
-            <p className="mt-3 font-label-caps text-label-caps text-on-surface-variant">ไม่มีข้อมูลเดือนก่อน</p>
-          ) : (
-            <div className={`mt-3 flex items-center gap-1.5 ${growthExpense.up ? "text-error" : "text-primary"}`}>
-              <span className="material-symbols-outlined text-[16px]">
-                {growthExpense.up ? "trending_up" : "trending_down"}
-              </span>
-              <span className="font-label-caps text-label-caps">{growthExpense.text}</span>
-            </div>
-          )}
-        </div>
-
-        {/* กำไรสุทธิ — HERO CARD (dark green) */}
-        <div className={`p-7 rounded-2xl md:col-span-2 ${profit >= 0 ? "card-hero" : "metric-card"}`}>
-          <span className={`font-label-caps text-label-caps block mb-3 ${profit >= 0 ? "text-green-200" : "text-on-surface-variant"}`}>
-            กำไรสุทธิ
-          </span>
-          <div className={`flex items-baseline gap-2 ${profit >= 0 ? "text-white" : "text-error"}`}>
-            <span className="text-2xl font-bold opacity-70">฿</span>
-            <span className="font-display-currency text-display-currency tracking-tight leading-none">
-              {formatMoney(Math.abs(profit))}
-            </span>
-          </div>
-          <div className={`mt-3 flex items-center gap-2 ${profit >= 0 ? "text-green-200" : "text-error"}`}>
-            <span className="material-symbols-outlined text-[16px]">
-              {profit >= 0 ? "check_circle" : "cancel"}
-            </span>
-            <span className="font-label-caps text-label-caps">
-              {profit >= 0 ? `อัตรากำไร ${margin.toFixed(1)}%` : "ขาดทุน"}
-            </span>
-          </div>
-          {growthProfit.noData ? (
-            <p className="mt-2 font-label-caps text-label-caps opacity-60" style={{ color: profit >= 0 ? "#bbf7d0" : undefined }}>ไม่มีข้อมูลเดือนก่อน</p>
-          ) : (
-            <div className={`mt-2 flex items-center gap-1.5 ${growthProfit.up ? "text-green-200" : "text-red-300"}`}>
-              <span className="material-symbols-outlined text-[14px]">
-                {growthProfit.up ? "trending_up" : "trending_down"}
-              </span>
-              <span className="font-label-caps text-label-caps text-xs">{growthProfit.text}</span>
-            </div>
-          )}
-          {!growthMargin.noData && (
-            <div className={`mt-1 flex items-center gap-1 ${growthMargin.up ? "text-green-200" : "text-red-300"}`}>
-              <span className="font-label-caps text-xs opacity-80">อัตรากำไร {growthMargin.text}</span>
-            </div>
-          )}
-        </div>
-
-      </div>
-
-      {/* ── วิเคราะห์โครงสร้างต้นทุน ──────────────────────── */}
-      <div className="metric-card p-7 rounded-2xl">
-        <h3 className="font-headline-md text-headline-md text-on-surface mb-5">
-          วิเคราะห์โครงสร้างต้นทุน
-        </h3>
-        <div className="space-y-4">
-          <ProgressRow label="รายรับ" amount={income} total={income} colorClass="bg-primary" />
-          <ProgressRow label="รายจ่าย" amount={expense} total={income} colorClass="bg-error" />
-          <ProgressRow label="กำไรสุทธิ" amount={Math.max(profit, 0)} total={income} colorClass="bg-primary-container" />
-        </div>
-      </div>
-
-      {/* ── AI Summary ─────────────────────────────────────── */}
-      <div className="metric-card p-7 rounded-2xl">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center">
-            <span className="material-symbols-outlined text-on-primary-container text-[20px]">auto_awesome</span>
-          </div>
-          <div>
-            <h3 className="font-headline-md text-headline-md text-on-surface">วิเคราะห์อัตโนมัติ</h3>
-            <p className="font-label-caps text-label-caps text-on-surface-variant">วิเคราะห์จากเกณฑ์ข้อมูล</p>
-          </div>
-        </div>
-        <div className="space-y-3">
-          {[
-            { icon: "trending_up", text: aiSummary.profitText },
-            { icon: "pie_chart", text: aiSummary.marginText },
-            { icon: "receipt_long", text: aiSummary.topExpenseText },
-            { icon: "lightbulb", text: aiSummary.advice },
-          ].map(({ icon, text }) => (
-            <div key={icon} className="flex items-start gap-3 p-4 bg-surface-container-low rounded-xl">
-              <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">{icon}</span>
-              <p className="font-body-md text-on-surface">{text}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* ── รายรับแยกตามหมวดหมู่ ───────────────────────────── */}
       {Object.keys(incomeBreak).length > 0 && (
         <div className="metric-card rounded-2xl overflow-hidden">
@@ -867,50 +855,6 @@ export function ReportsContent() {
         )}
       </div>
 
-      {/* ── รายการล่าสุด ────────────────────────────────────── */}
-      <div className="metric-card rounded-2xl overflow-hidden">
-        <div className="p-7 pb-0">
-          <h3 className="font-headline-md text-headline-md text-on-surface">รายการล่าสุด</h3>
-          <p className="font-label-caps text-label-caps text-on-surface-variant mt-1">
-            {formatMonthLabel(selectedMonth)} — 10 รายการล่าสุด
-          </p>
-        </div>
-        {recentTxns.length === 0 ? (
-          <p className="px-7 py-10 font-body-md text-on-surface-variant text-center">
-            ยังไม่มีรายการในเดือนนี้
-          </p>
-        ) : (
-          <div className="mt-5 divide-y divide-surface-container-low">
-            {recentTxns.map((tx) => (
-              <div key={tx.id} className="px-7 py-4 flex items-center gap-4 hover:bg-surface-container-low transition-colors">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                  tx.type === "income" ? "bg-primary-container" : "bg-error-container"
-                }`}>
-                  <span className={`material-symbols-outlined text-[18px] ${
-                    tx.type === "income" ? "text-on-primary-container" : "text-on-error-container"
-                  }`}>
-                    {tx.type === "income" ? "arrow_upward" : "arrow_downward"}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-body-md text-on-surface truncate">
-                    {tx.description && (tx.description.startsWith("POS_IMPORT_") || tx.description.startsWith("POS Import:"))
-                      ? formatPosNote(tx.description, tx.category)
-                      : (tx.description || getCategoryLabel(tx.category))}
-                  </p>
-                  <p className="font-label-caps text-label-caps text-on-surface-variant">{getCategoryLabel(tx.category)} · {formatTransactionDate(tx.date)}</p>
-                </div>
-                <div className={`font-price-table text-price-table shrink-0 ${
-                  tx.type === "income" ? "text-primary" : "text-error"
-                }`}>
-                  {tx.type === "income" ? "+" : "-"}฿{formatMoney(tx.amount)}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* ── ภาพรวมรายปี ─────────────────────────────────────── */}
       <div className="metric-card rounded-2xl overflow-hidden print:hidden">
         <button
@@ -1037,6 +981,21 @@ export function ReportsContent() {
         )}
       </div>
 
+
+      {/* ── Export Section — mobile only ───────────────────── */}
+      <div className="md:hidden metric-card p-5 rounded-2xl print:hidden">
+        <p className="font-label-caps text-label-caps text-on-surface-variant mb-3">ส่งออกรายงาน</p>
+        <div className="flex flex-col gap-3">
+          <button onClick={exportAccountant} className="btn-primary w-full">
+            <span className="material-symbols-outlined text-[18px]">table_view</span>
+            Export สรุปนักบัญชี (.xlsx)
+          </button>
+          <button onClick={exportPDF} className="btn-secondary w-full">
+            <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+            พิมพ์ / บันทึก PDF
+          </button>
+        </div>
+      </div>
 
     </div>
   );
