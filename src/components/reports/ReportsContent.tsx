@@ -361,6 +361,45 @@ export function ReportsContent() {
         </button>
       </div>
 
+      {/* ── Cash Flow Forecast ─────────────────────────────── */}
+      {forecast.avgIncome > 0 && (
+        <div className="metric-card p-7 rounded-2xl">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-on-primary-container text-[20px]">trending_up</span>
+            </div>
+            <div>
+              <h3 className="font-headline-md text-headline-md text-on-surface">พยากรณ์เดือนหน้า</h3>
+              <p className="font-label-caps text-label-caps text-on-surface-variant">
+                คำนวณจากค่าเฉลี่ย {forecast.months} เดือนย้อนหลัง
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-surface-container rounded-xl p-4">
+              <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">รายรับคาดการณ์</p>
+              <p className="font-price-table text-price-table text-primary">฿{formatMoney(Math.round(forecast.avgIncome))}</p>
+            </div>
+            <div className="bg-surface-container rounded-xl p-4">
+              <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">รายจ่ายคาดการณ์</p>
+              <p className="font-price-table text-price-table text-error">฿{formatMoney(Math.round(forecast.avgExpense))}</p>
+            </div>
+            <div className={`rounded-xl p-4 ${forecast.avgProfit >= 0 ? "bg-primary-container" : "bg-error-container"}`}>
+              <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">กำไรคาดการณ์</p>
+              <p className={`font-price-table text-price-table ${forecast.avgProfit >= 0 ? "text-on-primary-container" : "text-error"}`}>
+                {forecast.avgProfit >= 0 ? "+" : ""}฿{formatMoney(Math.round(forecast.avgProfit))}
+              </p>
+            </div>
+          </div>
+          {forecast.avgProfit < 0 && (
+            <div className="mt-4 flex items-center gap-2 p-3 bg-error-container rounded-xl">
+              <span className="material-symbols-outlined text-error text-[18px]">warning</span>
+              <p className="font-body-sm text-on-error-container">แนวโน้มขาดทุน — ควรเร่งหาทางเพิ่มรายรับหรือลดต้นทุน</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── เปรียบเทียบเดือน ────────────────────────────────── */}
       <div className="metric-card rounded-2xl overflow-hidden print:hidden">
         <button
@@ -992,44 +1031,6 @@ export function ReportsContent() {
         )}
       </div>
 
-      {/* ── Cash Flow Forecast ─────────────────────────────── */}
-      {forecast.avgIncome > 0 && (
-        <div className="metric-card p-7 rounded-2xl">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-on-primary-container text-[20px]">trending_up</span>
-            </div>
-            <div>
-              <h3 className="font-headline-md text-headline-md text-on-surface">พยากรณ์เดือนหน้า</h3>
-              <p className="font-label-caps text-label-caps text-on-surface-variant">
-                คำนวณจากค่าเฉลี่ย {forecast.months} เดือนย้อนหลัง
-              </p>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-surface-container rounded-xl p-4">
-              <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">รายรับคาดการณ์</p>
-              <p className="font-price-table text-price-table text-primary">฿{formatMoney(Math.round(forecast.avgIncome))}</p>
-            </div>
-            <div className="bg-surface-container rounded-xl p-4">
-              <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">รายจ่ายคาดการณ์</p>
-              <p className="font-price-table text-price-table text-error">฿{formatMoney(Math.round(forecast.avgExpense))}</p>
-            </div>
-            <div className={`rounded-xl p-4 ${forecast.avgProfit >= 0 ? "bg-primary-container" : "bg-error-container"}`}>
-              <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">กำไรคาดการณ์</p>
-              <p className={`font-price-table text-price-table ${forecast.avgProfit >= 0 ? "text-on-primary-container" : "text-error"}`}>
-                {forecast.avgProfit >= 0 ? "+" : ""}฿{formatMoney(Math.round(forecast.avgProfit))}
-              </p>
-            </div>
-          </div>
-          {forecast.avgProfit < 0 && (
-            <div className="mt-4 flex items-center gap-2 p-3 bg-error-container rounded-xl">
-              <span className="material-symbols-outlined text-error text-[18px]">warning</span>
-              <p className="font-body-sm text-on-error-container">แนวโน้มขาดทุน — ควรเร่งหาทางเพิ่มรายรับหรือลดต้นทุน</p>
-            </div>
-          )}
-        </div>
-      )}
 
     </div>
   );
