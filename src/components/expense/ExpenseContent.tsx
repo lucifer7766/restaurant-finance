@@ -455,58 +455,61 @@ export function ExpenseContent() {
         </div>
       )}
 
-      {/* ── Category Cards ──────────────────────────────────── */}
+      {/* ── สัดส่วนรายจ่ายตามหมวดหมู่ ──────────────────────── */}
       {isLoading ? (
-        <div className="space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="metric-card rounded-2xl p-7 animate-pulse">
-              <div className="h-3 bg-surface-container-highest rounded w-1/3 mb-5" />
-              <div className="h-12 bg-surface-container-highest rounded w-2/3" />
-            </div>
-          ))}
+        <div className="metric-card rounded-2xl p-6 animate-pulse">
+          <div className="h-3 bg-surface-container-highest rounded w-1/3 mb-5" />
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => <div key={i} className="h-8 bg-surface-container-highest rounded" />)}
+          </div>
         </div>
       ) : categoryBreakdown.length === 0 ? (
         <div className="metric-card p-10 rounded-2xl text-center">
           <p className="font-body-md text-on-surface-variant">ยังไม่มีรายจ่ายใน{monthLabel}</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {categoryBreakdown.map(({ category, amount }) => {
-            const meta = getCategoryMeta(category);
-            const pct = totalExpense > 0 ? Math.round((amount / totalExpense) * 100) : 0;
-            const prevAmt = prevCategoryTotals[category] ?? 0;
-            const hasPrev = prevAmt > 0;
-            const trend = hasPrev ? Math.round(((amount - prevAmt) / prevAmt) * 100) : 0;
-            return (
-              <div key={category} className="metric-card p-6 rounded-2xl">
-                {/* Top row: icon + stats */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${meta.bg}`}>
-                    <span className={`material-symbols-outlined text-[20px] ${meta.iconColor}`}>{meta.icon}</span>
+        <div className="metric-card rounded-2xl overflow-hidden">
+          <div className="p-6 pb-4">
+            <h3 className="font-headline-md text-headline-md text-on-surface">สัดส่วนรายจ่ายตามหมวดหมู่</h3>
+          </div>
+          <div className="px-6 pb-6 space-y-5">
+            {categoryBreakdown.map(({ category, amount }) => {
+              const meta = getCategoryMeta(category);
+              const pct = totalExpense > 0 ? (amount / totalExpense) * 100 : 0;
+              const prevAmt = prevCategoryTotals[category] ?? 0;
+              const trend = prevTotalExpense > 0 && prevAmt > 0
+                ? ((amount - prevAmt) / prevAmt) * 100
+                : null;
+              return (
+                <div key={category}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
+                        <span className={`material-symbols-outlined text-[16px] ${meta.iconColor}`}>{meta.icon}</span>
+                      </div>
+                      <div>
+                        <p className="font-body-md text-on-surface text-sm">{getCategoryLabel(category)}</p>
+                        {trend !== null ? (
+                          <p className={`font-label-caps text-label-caps text-xs ${trend > 0 ? "text-error" : trend < 0 ? "text-primary" : "text-on-surface-variant"}`}>
+                            {trend > 0 ? "▲ +" : trend < 0 ? "▼ " : ""}{trend.toFixed(1)}% จากเดือนก่อน
+                          </p>
+                        ) : prevTotalExpense > 0 ? (
+                          <p className="font-label-caps text-label-caps text-xs text-on-surface-variant">ไม่มีเดือนก่อน</p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-price-table text-price-table text-on-surface text-sm">฿{amount.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                      <p className="font-label-caps text-label-caps text-on-surface-variant text-xs">{pct.toFixed(1)}%</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-medium tracking-normal text-on-surface-variant">{pct}% ของรายจ่ายทั้งหมด</p>
-                    {hasPrev && (
-                      <p className={`text-xs font-medium tracking-normal ${trend >= 0 ? "text-error" : "text-primary"}`}>
-                        {trend >= 0 ? "+" : ""}{trend}% จากเดือนก่อน
-                      </p>
-                    )}
+                  <div className="h-2 bg-surface-container-highest rounded-full overflow-hidden">
+                    <div className="h-full bg-error rounded-full transition-all" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
-                {/* Category name */}
-                <p className="text-sm font-medium text-on-surface-variant mb-1">
-                  {getCategoryLabel(category)}
-                </p>
-                {/* Amount */}
-                <div className="flex items-baseline gap-1 text-on-surface">
-                  <span className="text-base font-bold opacity-50">฿</span>
-                  <span className="text-3xl font-bold font-headline-md tracking-tight">
-                    {amount.toLocaleString("th-TH")}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
