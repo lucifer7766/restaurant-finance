@@ -11,6 +11,8 @@ import {
 } from "@/lib/data";
 import { formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote } from "@/lib/utils";
 
+const THAI_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+
 function formatMoney(amount: number) {
   return amount.toLocaleString("th-TH", {
     minimumFractionDigits: 0,
@@ -68,6 +70,25 @@ export function ReportsContent() {
   const { transactions, isLoading, error: loadError } = useTransactions();
   const { selectedMonth } = useMonthFilter();
   const [compareOpen, setCompareOpen] = useState(false);
+  const [yearlyOpen, setYearlyOpen] = useState(false);
+  const selectedYear = selectedMonth.slice(0, 4);
+
+  /* ── Yearly data ── */
+  const yearlyData = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const monthKey = `${selectedYear}-${String(i + 1).padStart(2, "0")}`;
+      const r = getMonthlyReportFromTransactions(transactions, monthKey);
+      return { monthKey, label: THAI_MONTHS[i], income: r.totalIncome, expense: r.totalExpenses, profit: r.netProfit };
+    });
+  }, [transactions, selectedYear]);
+
+  const yearlyTotals = useMemo(() => ({
+    income: yearlyData.reduce((s, d) => s + d.income, 0),
+    expense: yearlyData.reduce((s, d) => s + d.expense, 0),
+    profit: yearlyData.reduce((s, d) => s + d.profit, 0),
+  }), [yearlyData]);
+
+  const yearlyMaxIncome = useMemo(() => Math.max(...yearlyData.map(d => d.income), 1), [yearlyData]);
 
   const report = useMemo(
     () => getMonthlyReportFromTransactions(transactions, selectedMonth),
@@ -229,6 +250,59 @@ export function ReportsContent() {
     window.print();
   }, []);
 
+  /* ── Export สรุปนักบัญชี (Excel ครบวงจร) ── */
+  const exportAccountant = useCallback(() => {
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: สรุปรายเดือน
+    const summaryRows = [
+      ["สรุปรายงานการเงิน", `${formatMonthLabel(selectedMonth)}`],
+      [],
+      ["รายการ", "จำนวนเงิน (บาท)"],
+      ["รายรับรวม", income],
+      ["รายจ่ายรวม", expense],
+      ["กำไรสุทธิ", profit],
+      ["อัตรากำไร (%)", Number(margin.toFixed(2))],
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryRows), "สรุปเดือนนี้");
+
+    // Sheet 2: รายจ่ายแยกหมวด
+    const expRows = [
+      ["หมวดหมู่", "จำนวนเงิน (บาท)", "สัดส่วน (%)"],
+      ...report.expenseBreakdown.map(e => [
+        e.category,
+        e.amount,
+        expense > 0 ? Number(((e.amount / expense) * 100).toFixed(2)) : 0,
+      ]),
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(expRows), "รายจ่ายแยกหมวด");
+
+    // Sheet 3: รายการทั้งหมดในเดือน
+    const monthTxns = filterTransactionsByMonth(transactions, selectedMonth);
+    const txRows = [
+      ["วันที่", "ประเภท", "หมวดหมู่", "จำนวนเงิน (บาท)", "หมายเหตุ"],
+      ...monthTxns.map(t => [
+        t.date,
+        t.type === "income" ? "รายรับ" : "รายจ่าย",
+        getCategoryLabel(t.category),
+        t.amount,
+        t.description ?? "",
+      ]),
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(txRows), "รายการทั้งหมด");
+
+    // Sheet 4: ภาพรวมรายปี
+    const yrRows = [
+      ["เดือน", "รายรับ", "รายจ่าย", "กำไรสุทธิ"],
+      ...yearlyData.map(d => [d.label, d.income, d.expense, d.profit]),
+      [],
+      ["รวมทั้งปี", yearlyTotals.income, yearlyTotals.expense, yearlyTotals.profit],
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(yrRows), `ภาพรวมปี ${selectedYear}`);
+
+    XLSX.writeFile(wb, `รายงานการเงิน-${selectedMonth}.xlsx`);
+  }, [income, expense, profit, margin, report, transactions, selectedMonth, yearlyData, yearlyTotals, selectedYear]);
+
   /* ── Loading skeleton ───────────────────────────────────────────────────── */
   if (isLoading) {
     return (
@@ -269,14 +343,23 @@ export function ReportsContent() {
         </p>
       </div>
 
-      {/* ── Export PDF — full-width hero button ────────────── */}
-      <button
-        onClick={exportPDF}
-        className="btn-primary w-full py-3.5 text-base print:hidden"
-      >
-        <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
-        บันทึก PDF / พิมพ์รายงาน
-      </button>
+      {/* ── Export buttons ──────────────────────────────────── */}
+      <div className="flex flex-wrap gap-2 justify-end print:hidden">
+        <button
+          onClick={exportAccountant}
+          className="btn-primary px-5 py-2.5 text-sm"
+        >
+          <span className="material-symbols-outlined text-[18px]">table_view</span>
+          Export สรุปนักบัญชี (.xlsx)
+        </button>
+        <button
+          onClick={exportPDF}
+          className="btn-secondary px-5 py-2.5 text-sm"
+        >
+          <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+          พิมพ์ / บันทึก PDF
+        </button>
+      </div>
 
       {/* ── เปรียบเทียบเดือน ────────────────────────────────── */}
       <div className="metric-card rounded-2xl overflow-hidden print:hidden">
@@ -779,6 +862,132 @@ export function ReportsContent() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── ภาพรวมรายปี ─────────────────────────────────────── */}
+      <div className="metric-card rounded-2xl overflow-hidden print:hidden">
+        <button
+          onClick={() => setYearlyOpen(v => !v)}
+          className="w-full p-6 flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-on-primary-container text-[20px]">calendar_today</span>
+            </div>
+            <div>
+              <h3 className="font-headline-md text-headline-md text-on-surface">ภาพรวมรายปี {selectedYear}</h3>
+              <p className="font-label-caps text-label-caps text-on-surface-variant">
+                รายรับรวม ฿{formatMoney(yearlyTotals.income)} · กำไรรวม ฿{formatMoney(yearlyTotals.profit)}
+              </p>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-on-surface-variant">
+            {yearlyOpen ? "expand_less" : "expand_more"}
+          </span>
+        </button>
+
+        {yearlyOpen && (
+          <div className="px-6 pb-6 space-y-5">
+            {/* KPI ปี */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "รายรับรวมปี", value: yearlyTotals.income, color: "text-primary" },
+                { label: "รายจ่ายรวมปี", value: yearlyTotals.expense, color: "text-error" },
+                { label: "กำไรสุทธิปี", value: yearlyTotals.profit, color: yearlyTotals.profit >= 0 ? "text-primary" : "text-error" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="bg-surface-container rounded-xl p-3 text-center">
+                  <p className="font-label-caps text-label-caps text-on-surface-variant mb-1 text-xs">{label}</p>
+                  <p className={`font-semibold text-sm ${color}`}>฿{formatMoney(Math.abs(value))}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Bar chart 12 เดือน */}
+            <div>
+              <p className="font-label-caps text-label-caps text-on-surface-variant mb-3">รายรับ vs รายจ่าย รายเดือน</p>
+              <div className="flex items-end gap-1 h-32">
+                {yearlyData.map(({ label, income: inc, expense: exp, monthKey }) => {
+                  const isSelected = monthKey === selectedMonth;
+                  const incH = yearlyMaxIncome > 0 ? (inc / yearlyMaxIncome) * 100 : 0;
+                  const expH = yearlyMaxIncome > 0 ? (exp / yearlyMaxIncome) * 100 : 0;
+                  return (
+                    <div key={monthKey} className="flex-1 flex flex-col items-center gap-0.5">
+                      <div className="w-full flex items-end gap-0.5 h-24">
+                        <div
+                          className={`flex-1 rounded-t transition-all ${isSelected ? "bg-primary" : "bg-primary/40"}`}
+                          style={{ height: `${incH}%`, minHeight: inc > 0 ? "3px" : "0" }}
+                          title={`รายรับ ฿${formatMoney(inc)}`}
+                        />
+                        <div
+                          className={`flex-1 rounded-t transition-all ${isSelected ? "bg-error" : "bg-error/40"}`}
+                          style={{ height: `${expH}%`, minHeight: exp > 0 ? "3px" : "0" }}
+                          title={`รายจ่าย ฿${formatMoney(exp)}`}
+                        />
+                      </div>
+                      <span className={`font-label-caps text-label-caps text-[9px] ${isSelected ? "text-primary font-bold" : "text-on-surface-variant"}`}>
+                        {label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded bg-primary/60" />
+                  <span className="font-label-caps text-label-caps text-on-surface-variant text-xs">รายรับ</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded bg-error/60" />
+                  <span className="font-label-caps text-label-caps text-on-surface-variant text-xs">รายจ่าย</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ตาราง 12 เดือน */}
+            <div className="overflow-x-auto -mx-1">
+              <table className="w-full text-sm min-w-[480px]">
+                <thead>
+                  <tr className="border-b border-surface-variant">
+                    <th className="py-2 px-2 text-left font-label-caps text-label-caps text-on-surface-variant">เดือน</th>
+                    <th className="py-2 px-2 text-right font-label-caps text-label-caps text-on-surface-variant">รายรับ</th>
+                    <th className="py-2 px-2 text-right font-label-caps text-label-caps text-on-surface-variant">รายจ่าย</th>
+                    <th className="py-2 px-2 text-right font-label-caps text-label-caps text-on-surface-variant">กำไร</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {yearlyData.map(({ monthKey, label, income: inc, expense: exp, profit: pro }) => {
+                    const isSelected = monthKey === selectedMonth;
+                    const hasData = inc > 0 || exp > 0;
+                    return (
+                      <tr key={monthKey} className={`border-b border-surface-variant last:border-0 ${isSelected ? "bg-primary-container/30" : ""}`}>
+                        <td className={`py-2.5 px-2 font-body-md ${isSelected ? "text-primary font-semibold" : hasData ? "text-on-surface" : "text-on-surface-variant"}`}>
+                          {label} {isSelected && "◀"}
+                        </td>
+                        <td className={`py-2.5 px-2 text-right font-price-table text-price-table tabular-nums ${hasData ? "text-primary" : "text-on-surface-variant"}`}>
+                          {inc > 0 ? `฿${formatMoney(inc)}` : "—"}
+                        </td>
+                        <td className={`py-2.5 px-2 text-right font-price-table text-price-table tabular-nums ${hasData ? "text-error" : "text-on-surface-variant"}`}>
+                          {exp > 0 ? `฿${formatMoney(exp)}` : "—"}
+                        </td>
+                        <td className={`py-2.5 px-2 text-right font-price-table text-price-table tabular-nums ${pro > 0 ? "text-primary" : pro < 0 ? "text-error" : "text-on-surface-variant"}`}>
+                          {hasData ? `฿${formatMoney(pro)}` : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="border-t-2 border-surface-variant bg-surface-container-low">
+                    <td className="py-3 px-2 font-semibold text-on-surface">รวมทั้งปี</td>
+                    <td className="py-3 px-2 text-right font-semibold text-primary tabular-nums">฿{formatMoney(yearlyTotals.income)}</td>
+                    <td className="py-3 px-2 text-right font-semibold text-error tabular-nums">฿{formatMoney(yearlyTotals.expense)}</td>
+                    <td className={`py-3 px-2 text-right font-semibold tabular-nums ${yearlyTotals.profit >= 0 ? "text-primary" : "text-error"}`}>
+                      ฿{formatMoney(yearlyTotals.profit)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

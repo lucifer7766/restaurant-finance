@@ -12,6 +12,7 @@ import {
   getMonthlyReportFromTransactions,
 } from "@/lib/data";
 import { formatBaht, formatMonthLabel, formatTransactionDate, getCategoryLabel, formatPosNote, getCategoryMeta } from "@/lib/utils";
+import { MonthlyGoalCard } from "@/components/dashboard/MonthlyGoalCard";
 
 const THAI_MONTHS_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
@@ -343,6 +344,14 @@ export function DashboardContent() {
           );
         })()}
       </div>
+
+      {/* ── Monthly Goal ───────────────────────────────────── */}
+      <MonthlyGoalCard
+        monthKey={selectedMonth}
+        actualIncome={report.totalIncome}
+        actualExpense={report.totalExpenses}
+        actualProfit={report.netProfit}
+      />
 
       {/* ── Revenue vs Expenses Chart ───────────────────────── */}
       <div className="metric-card p-6 rounded-2xl">
