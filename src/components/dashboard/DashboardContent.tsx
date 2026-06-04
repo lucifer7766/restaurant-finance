@@ -392,6 +392,45 @@ export function DashboardContent() {
         })()}
       </div>
 
+      {/* ── สิ่งที่ควรจับตา ─────────────────────────────────── */}
+      {transactions.length > 0 && (() => {
+        const signals: { icon: string; color: string; text: string }[] = [];
+        if (report.netProfit < 0)
+          signals.push({ icon: "trending_down", color: "text-error", text: "กำไรติดลบเดือนนี้ — รายจ่ายสูงกว่ารายรับ" });
+        else if (prevReport.netProfit > 0 && report.netProfit < prevReport.netProfit) {
+          const pct = ((report.netProfit - prevReport.netProfit) / prevReport.netProfit) * 100;
+          if (pct < -10) signals.push({ icon: "trending_down", color: "text-error", text: `กำไรลดลง ${Math.abs(pct).toFixed(1)}% จากเดือนก่อน` });
+        }
+        if (expenseGrowth > 10 && prevReport.totalExpenses > 0)
+          signals.push({ icon: "warning", color: "text-error", text: `รายจ่ายเพิ่มขึ้น ${expenseGrowth.toFixed(1)}% จากเดือนก่อน — ควรตรวจสอบต้นทุน` });
+        if (revenueGrowth < -5 && prevReport.totalIncome > 0)
+          signals.push({ icon: "trending_down", color: "text-error", text: `รายรับลดลง ${Math.abs(revenueGrowth).toFixed(1)}% — ควรหาช่องทางเพิ่มยอดขาย` });
+        if (report.expenseBreakdown[0] && totalExpensesSum > 0) {
+          const top = report.expenseBreakdown[0];
+          const pct = (top.amount / totalExpensesSum) * 100;
+          if (pct > 40) signals.push({ icon: "payments", color: "text-on-surface-variant", text: `${top.category} คิดเป็น ${pct.toFixed(0)}% ของต้นทุน — หมวดนี้ควบคุมผล P&L มากที่สุด` });
+        }
+        if (cumulativeNet > 0 && revenueGrowth > 0 && signals.length === 0)
+          signals.push({ icon: "check_circle", color: "text-primary", text: "กระแสเงินสดสะสมเป็นบวกและรายรับกำลังเติบโต — ธุรกิจดำเนินไปได้ดี" });
+        if (signals.length === 0) return null;
+        return (
+          <div className="metric-card rounded-2xl overflow-hidden">
+            <div className="px-5 pt-4 pb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-on-surface-variant">lightbulb</span>
+              <h3 className="font-headline-md text-headline-md text-on-surface">สิ่งที่ควรจับตา</h3>
+            </div>
+            <div className="px-5 pb-4 space-y-1">
+              {signals.map((s, i) => (
+                <div key={i} className="flex items-start gap-3 py-2.5 border-b border-surface-container-low last:border-0">
+                  <span className={`material-symbols-outlined text-[18px] shrink-0 mt-0.5 ${s.color}`}>{s.icon}</span>
+                  <p className="font-body-md text-on-surface text-sm">{s.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Monthly Goal ───────────────────────────────────── */}
       <MonthlyGoalCard
         monthKey={selectedMonth}

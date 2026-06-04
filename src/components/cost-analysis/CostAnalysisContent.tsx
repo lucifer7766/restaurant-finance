@@ -172,6 +172,35 @@ export function CostAnalysisContent() {
             </div>
           </div>
 
+          {/* Alert 0: Top 3 Cost Drivers */}
+          {currentReport.expenseBreakdown.length >= 2 && (
+            <div className="metric-card p-5 rounded-2xl">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">format_list_numbered</span>
+                <span className="font-headline-md text-headline-md text-on-surface">Top 3 Cost Drivers</span>
+              </div>
+              <div className="space-y-2">
+                {currentReport.expenseBreakdown.slice(0, 3).map((c, i) => {
+                  const pct = totalExpense > 0 ? (c.amount / totalExpense) * 100 : 0;
+                  const tips = ["เริ่มลดต้นทุนจากหมวดนี้ก่อน", "ตรวจสอบค่าใช้จ่ายในหมวดนี้", "ติดตามแนวโน้มหมวดนี้"];
+                  return (
+                    <div key={c.category} className="flex items-center gap-3 py-2 border-b border-surface-container-low last:border-0">
+                      <span className="w-5 h-5 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 font-bold text-xs text-on-surface-variant">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-body-md text-on-surface text-sm font-semibold">{c.category}</p>
+                        <p className="font-label-caps text-label-caps text-on-surface-variant text-xs">{tips[i]}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-price-table text-price-table text-on-surface text-sm">฿{formatMoney(c.amount)}</p>
+                        <p className="font-label-caps text-label-caps text-on-surface-variant text-xs">{pct.toFixed(0)}%</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Alert 2: Cost ratio */}
           <div className={`metric-card p-5 rounded-2xl flex items-start gap-4 border-l-4 ${
             costRatio > 70 ? "border-error" : costRatio > 50 ? "border-tertiary" : "border-primary"

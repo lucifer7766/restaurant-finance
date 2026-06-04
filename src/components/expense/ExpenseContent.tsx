@@ -513,6 +513,44 @@ export function ExpenseContent() {
         </div>
       )}
 
+      {/* ── Insight รายจ่าย ─────────────────────────────────── */}
+      {!isLoading && categoryBreakdown.length > 0 && (() => {
+        const insights: { icon: string; color: string; text: string }[] = [];
+        const top = categoryBreakdown[0];
+        if (top) {
+          const pct = totalExpense > 0 ? ((top.amount / totalExpense) * 100).toFixed(0) : "0";
+          insights.push({ icon: "receipt_long", color: "text-error", text: `"${getCategoryLabel(top.category)}" เป็นค่าใช้จ่ายสูงสุด ${pct}% ของต้นทุนทั้งหมด` });
+        }
+        if (prevTotalExpense > 0) {
+          const biggest = categoryBreakdown
+            .map(c => ({ label: getCategoryLabel(c.category), pct: (prevCategoryTotals[c.category] ?? 0) > 0 ? ((c.amount - (prevCategoryTotals[c.category] ?? 0)) / (prevCategoryTotals[c.category] ?? 1)) * 100 : 0 }))
+            .filter(c => c.pct > 10)
+            .sort((a, b) => b.pct - a.pct)[0];
+          if (biggest) insights.push({ icon: "trending_up", color: "text-error", text: `"${biggest.label}" เพิ่มขึ้นแรงสุด ${biggest.pct.toFixed(1)}% จากเดือนก่อน — ควรตรวจสอบ` });
+        }
+        const highCats = ["วัตถุดิบ", "ค่าแรง"];
+        const highTotal = categoryBreakdown.filter(c => highCats.includes(c.category)).reduce((s, c) => s + c.amount, 0);
+        if (totalExpense > 0 && (highTotal / totalExpense) > 0.7)
+          insights.push({ icon: "warning", color: "text-error", text: `วัตถุดิบ + ค่าแรง รวมกัน ${((highTotal / totalExpense) * 100).toFixed(0)}% ของต้นทุน — สูงกว่าเกณฑ์ปกติ` });
+        if (insights.length === 0) return null;
+        return (
+          <div className="metric-card rounded-2xl overflow-hidden">
+            <div className="px-5 pt-4 pb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]" style={{ color: "#ba1a1a" }}>lightbulb</span>
+              <h3 className="font-headline-md text-headline-md text-on-surface">Insight รายจ่าย</h3>
+            </div>
+            <div className="px-5 pb-4 space-y-1">
+              {insights.map((s, i) => (
+                <div key={i} className="flex items-start gap-3 py-2.5 border-b border-surface-container-low last:border-0">
+                  <span className={`material-symbols-outlined text-[18px] shrink-0 mt-0.5 ${s.color}`}>{s.icon}</span>
+                  <p className="font-body-md text-on-surface text-sm">{s.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── รายการล่าสุด / รายการทั้งหมด ───────────────────── */}
       <div className="metric-card rounded-2xl overflow-hidden">
         <div className="p-6 pb-0 flex items-center justify-between">
