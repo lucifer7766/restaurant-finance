@@ -729,7 +729,37 @@ export function ReportsContent() {
           <div className="p-7 pb-0">
             <h3 className="font-headline-md text-headline-md text-on-surface">รายรับแยกตามหมวดหมู่</h3>
           </div>
-          <div className="mt-6 overflow-x-auto">
+          {/* Mobile compact list */}
+          <div className="md:hidden mt-4 px-5 pb-5 space-y-4">
+            {Object.entries(incomeBreak).sort((a, b) => b[1] - a[1]).map(([category, amount]) => {
+              const pct = income > 0 ? (amount / income) * 100 : 0;
+              const prevAmt = prevIncomeBreak[category] ?? 0;
+              const tr = trendDisplay(amount, prevAmt, hasPrevData);
+              return (
+                <div key={category}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="font-body-md text-on-surface text-sm">{getCategoryLabel(category)}</p>
+                    <p className="font-price-table text-price-table text-on-surface text-sm">฿{formatMoney(amount)}</p>
+                  </div>
+                  <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden mb-1.5">
+                    <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-label-caps text-label-caps text-on-surface-variant text-xs">{pct.toFixed(1)}%</span>
+                    {tr.noData ? (
+                      <span className="font-label-caps text-label-caps text-on-surface-variant text-xs">—</span>
+                    ) : (
+                      <span className={`font-label-caps text-label-caps text-xs ${tr.up ? "text-primary" : "text-error"}`}>
+                        {tr.up ? "▲" : "▼"} {tr.text.split("%")[0]}% จากเดือนก่อน
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden md:block mt-6 overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-surface-variant text-left">
@@ -807,7 +837,38 @@ export function ReportsContent() {
             ยังไม่มีข้อมูลค่าใช้จ่ายในเดือนนี้
           </p>
         ) : (
-          <div className="mt-6 overflow-x-auto">
+          <>
+          {/* Mobile compact list */}
+          <div className="md:hidden mt-4 px-5 pb-5 space-y-4">
+            {report.expenseBreakdown.map(({ category, amount }) => {
+              const pct = expense > 0 ? (amount / expense) * 100 : 0;
+              const prevAmt = prevReport.expenseBreakdown.find((e) => e.category === category)?.amount ?? 0;
+              const tr = trendDisplay(amount, prevAmt, hasPrevData);
+              return (
+                <div key={category}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="font-body-md text-on-surface text-sm">{getCategoryLabel(category)}</p>
+                    <p className="font-price-table text-price-table text-error text-sm">฿{formatMoney(amount)}</p>
+                  </div>
+                  <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden mb-1.5">
+                    <div className="h-full bg-error transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-label-caps text-label-caps text-on-surface-variant text-xs">{pct.toFixed(1)}%</span>
+                    {tr.noData ? (
+                      <span className="font-label-caps text-label-caps text-on-surface-variant text-xs">—</span>
+                    ) : (
+                      <span className={`font-label-caps text-label-caps text-xs ${tr.up ? "text-error" : "text-primary"}`}>
+                        {tr.up ? "▲" : "▼"} {tr.text.split("%")[0]}% จากเดือนก่อน
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden md:block mt-6 overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-surface-variant text-left">
@@ -852,6 +913,7 @@ export function ReportsContent() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
