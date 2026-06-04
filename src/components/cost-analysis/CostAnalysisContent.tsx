@@ -172,12 +172,12 @@ export function CostAnalysisContent() {
             </div>
           </div>
 
-          {/* Alert 0: Top 3 Cost Drivers */}
+          {/* Alert 0: ต้นทุนหลัก 3 อันดับแรก */}
           {currentReport.expenseBreakdown.length >= 2 && (
             <div className="metric-card p-5 rounded-2xl">
               <div className="flex items-center gap-2 mb-3">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">format_list_numbered</span>
-                <span className="font-headline-md text-headline-md text-on-surface">Top 3 Cost Drivers</span>
+                <span className="font-headline-md text-headline-md text-on-surface">ต้นทุนหลัก 3 อันดับแรก</span>
               </div>
               <div className="space-y-2">
                 {currentReport.expenseBreakdown.slice(0, 3).map((c, i) => {

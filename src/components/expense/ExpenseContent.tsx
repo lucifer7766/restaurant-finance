@@ -513,7 +513,7 @@ export function ExpenseContent() {
         </div>
       )}
 
-      {/* ── Insight รายจ่าย ─────────────────────────────────── */}
+      {/* ── วิเคราะห์รายจ่าย ─────────────────────────────────── */}
       {!isLoading && categoryBreakdown.length > 0 && (() => {
         const insights: { icon: string; color: string; text: string }[] = [];
         const top = categoryBreakdown[0];
@@ -537,7 +537,7 @@ export function ExpenseContent() {
           <div className="metric-card rounded-2xl overflow-hidden">
             <div className="px-5 pt-4 pb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]" style={{ color: "#ba1a1a" }}>lightbulb</span>
-              <h3 className="font-headline-md text-headline-md text-on-surface">Insight รายจ่าย</h3>
+              <h3 className="font-headline-md text-headline-md text-on-surface">วิเคราะห์รายจ่าย</h3>
             </div>
             <div className="px-5 pb-4 space-y-1">
               {insights.map((s, i) => (
