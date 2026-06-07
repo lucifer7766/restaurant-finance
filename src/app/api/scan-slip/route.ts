@@ -16,15 +16,44 @@ const FALLBACK: ScanReceiptResult = {
  *   Phase 1 – Label keywords: "Amount:", "จำนวนเงิน", etc.
  *             → check same line, then next line (handles two-line KBank format)
  *   Phase 2 – Inline currency words: "Baht", "บาท", "฿"
- *             → same-line only (currency word sits beside the number)
+ *             → same-line first; if no number, fall back to PREVIOUS line
+ *             (handles three-line format: "1,500.00\nบาท")
  *
  * Never reads from: Transaction ID / Reference ID / account numbers / fee lines.
  *
- * Root-cause fix vs. previous version:
- *   Old isIdLine() matched ANY word ≥ 6 chars (e.g. "Amount", "Payment"),
- *   which caused the "Amount:" keyword line to be silently skipped and its
- *   next-line value ("60.00 Baht") to be ignored.
- *   New isValueNoiseLine() only flags actual ID/account tokens.
+ * ── Test cases (OCR text → expected amount) ──────────────────────────────────
+ *
+ * 1. KBank two-line:
+ *    "Amount\n1,500.00 Baht\nTransaction 382934APM18899" → 1500
+ *
+ * 2. SCB inline label+amount:
+ *    "จำนวนเงิน 2,350.00 บาท" → 2350
+ *
+ * 3. SCB three-line (label / amount / unit):
+ *    "จำนวนเงิน\n2,350.00\nบาท" → 2350
+ *
+ * 4. จำนวน (without เงิน) three-line format:
+ *    "โอนเงินสำเร็จ\nจำนวน\n800.00\nบาท" → 800  (Bug 1 fix)
+ *
+ * 5. Standalone บาท prev-line fallback:
+ *    "1,234.00\nบาท\nค่าธรรมเนียม 0.00 บาท" → 1234  (Bug 2 fix)
+ *
+ * 6. THB inline:
+ *    "Transfer Amount\nTHB 9,999.00" → 9999
+ *
+ * 7. Reference ID noise guard:
+ *    "Amount: 100.00\nTxn: 016153204847APM18899" → 100
+ *
+ * 8. Fee exclusion:
+ *    "Amount: 200.00\nFee\n0.00 Baht" → 200 (fee line excluded)
+ *
+ * 9. ยอดสุทธิ keyword:
+ *    "ยอดสุทธิ 450.00 บาท" → 450
+ *
+ * 10. No keyword, no currency → null (user must enter manually):
+ *    "Transfer ref 123456\nAccount 0012345678" → null
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 function extractSlipAmount(text: string): number | null {
   const lines = text.split(/\r?\n/).map((l) => l.trim());
@@ -109,18 +138,21 @@ function extractSlipAmount(text: string): number | null {
 
   // ── Phase 1: label keywords ───────────────────────────────────────────────
   // These words act as labels; the amount can be on the same line OR the next.
+  // Order matters — higher priority keywords first. Loop breaks at first match.
   const labelKeywords: RegExp[] = [
-    /จำนวนเงิน/,
-    /ยอดโอน/,
+    /จำนวนเงิน/,          // KTB, GSB, KBank Thai
+    /ยอดโอน/,             // TTB, BAY
     /ยอดชำระ/,
-    /ยอดเงิน/,
-    /โอนเงิน/,
+    /ยอดเงิน/,            // promptpay
+    /ยอดสุทธิ/,           // net amount (added)
+    /โอนเงิน/,            // SCB "โอนเงินสำเร็จ"
     /amount\s*transferred/i,
     /transfer(?:red)?\s*amount/i,
-    /\bamount\b/i,
+    /\bamount\b/i,         // KBank "Amount" label
     /\btotal\b/i,
-    /\bรวม\b/,
+    /รวม/,                 // FIXED: removed \b which doesn't work for Thai
     /\bthb\b/i,
+    /จำนวน/,               // ADDED: SCB/KTB "จำนวน" without เงิน (lower priority)
   ];
 
   for (const kw of labelKeywords) {
@@ -144,8 +176,11 @@ function extractSlipAmount(text: string): number | null {
     if (candidates.length) break; // stop at first matching keyword
   }
 
-  // ── Phase 2: inline currency keywords (same line only) ────────────────────
+  // ── Phase 2: inline currency keywords ────────────────────────────────────
   // Only used when Phase 1 found nothing.
+  // Same-line first; if no number on this line, fall back to PREVIOUS line
+  // (handles three-line format: "1,500.00\nบาท" where unit is a standalone line).
+  // Only accept DECIMAL from prev-line to avoid picking up dates/IDs.
   if (!candidates.length) {
     const inlineKeywords: RegExp[] = [/baht/i, /บาท/, /฿/];
     for (const kw of inlineKeywords) {
@@ -153,7 +188,16 @@ function extractSlipAmount(text: string): number | null {
         if (feeLines.has(i)) continue;
         if (!kw.test(lines[i])) continue;
         const v = getMoney(lines[i]);
-        if (v !== null && v > 0) candidates.push(v);
+        if (v !== null && v > 0) { candidates.push(v); continue; }
+        // Prev-line fallback: only trust decimal numbers (not bare integers)
+        if (i > 0 && !feeLines.has(i - 1)) {
+          const prevLine = lines[i - 1];
+          const decMatch = prevLine.replace(/,/g, "").match(/\b(\d+\.\d{1,2})\b/);
+          if (decMatch) {
+            const pv = parseFloat(decMatch[1]);
+            if (pv > 0 && pv < 10_000_000) candidates.push(pv);
+          }
+        }
       }
       if (candidates.length) break;
     }
