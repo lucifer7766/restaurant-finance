@@ -516,9 +516,9 @@ export function ReportsContent() {
               <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">รายจ่ายคาดการณ์</p>
               <p className="font-price-table text-price-table text-error">฿{formatMoney(Math.round(forecast.avgExpense))}</p>
             </div>
-            <div className={`rounded-xl p-4 ${forecast.avgProfit >= 0 ? "bg-primary-container" : "bg-error-container"}`}>
-              <p className="font-label-caps text-label-caps text-on-surface-variant mb-1">กำไรคาดการณ์</p>
-              <p className={`font-price-table text-price-table ${forecast.avgProfit >= 0 ? "text-on-primary-container" : "text-error"}`}>
+            <div className={`rounded-xl p-4 ${forecast.avgProfit >= 0 ? "bg-primary" : "bg-error"}`}>
+              <p className="font-label-caps text-label-caps text-white/80 mb-1">กำไรคาดการณ์</p>
+              <p className="font-price-table text-price-table text-white">
                 {forecast.avgProfit >= 0 ? "+" : ""}฿{formatMoney(Math.round(forecast.avgProfit))}
               </p>
             </div>
