@@ -228,11 +228,15 @@ body {
   .web-only { display: none !important; }
   .print-only { display: block !important; }
 
-  /* hide chrome UI */
-  nav, footer,
+  /* hide ALL chrome UI — header covers TopAppBar (<header>), aside covers AppSidebar (<aside>) */
+  nav, footer, header, aside,
   [class*="BottomNav"], [class*="TopAppBar"], [class*="AppSidebar"] {
     display: none !important;
   }
+
+  /* reset layout so print-only content starts at top with no extra space */
+  .canvas-bg { background: white !important; min-height: 0 !important; }
+  main { padding-top: 0 !important; padding-bottom: 0 !important; }
 
   body {
     background: white !important;

@@ -1094,7 +1094,7 @@ export function ReportsContent() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #115637", paddingBottom: "10px", marginBottom: "18px" }}>
           <div>
             <div style={{ fontSize: "9pt", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#115637" }}>SLIPLESS · Restaurant Finance</div>
-            <div style={{ fontSize: "20pt", fontWeight: 800, color: "#1b1c19", lineHeight: 1.2, marginTop: "2px" }}>{restaurantName}</div>
+            <div style={{ fontSize: "20pt", fontWeight: 800, color: "#1b1c19", lineHeight: 1.2, marginTop: "2px" }}>{restaurantName || "ร้านอาหารของฉัน"}</div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: "13pt", fontWeight: 700, color: "#1b1c19" }}>รายงานกำไรขาดทุน</div>
@@ -1313,7 +1313,7 @@ export function ReportsContent() {
         )}
       </div>
 
-      {/* ── SECTION 5: รายการธุรกรรมล่าสุด ─────────────────────────────────── */}
+      {/* ── SECTION 5: รายการธุรกรรมล่าสุด + Footer (รวมกันเพื่อป้องกันหน้าว่าง) ── */}
       <div style={{ breakBefore: "page" }}>
         <div style={{ fontSize: "12pt", fontWeight: 700, color: "#1b1c19", borderBottom: "1px solid #d8d3ca", paddingBottom: "6px", marginBottom: "12px" }}>
           รายการธุรกรรม · {formatMonthLabel(selectedMonth)}
@@ -1341,7 +1341,7 @@ export function ReportsContent() {
                     {t.type === "income" ? "รายรับ" : "รายจ่าย"}
                   </span>
                 </td>
-                <td style={{ padding: "5px 8px" }}>{t.category ?? "—"}</td>
+                <td style={{ padding: "5px 8px" }}>{t.category ? getCategoryLabel(t.category) || t.category : "—"}</td>
                 <td style={{ textAlign: "right", padding: "5px 8px", fontWeight: 600, whiteSpace: "nowrap" }}>
                   <span style={{ color: t.type === "income" ? "#115637" : "#ba1a1a" }}>
                     {t.type === "income" ? "+" : "-"}฿{formatMoney(t.amount)}
@@ -1354,12 +1354,12 @@ export function ReportsContent() {
             ))}
           </tbody>
         </table>
-      </div>
 
-      {/* Footer */}
-      <div style={{ marginTop: "28px", paddingTop: "8px", borderTop: "1px solid #d8d3ca", fontSize: "8.5pt", color: "#9a9a9a", display: "flex", justifyContent: "space-between" }}>
-        <span>สร้างโดย Slipless · Restaurant Finance System</span>
-        <span>{printDate}</span>
+        {/* Footer — อยู่ใน Section 5 เพื่อไม่ให้สร้างหน้าว่างแยก */}
+        <div style={{ marginTop: "28px", paddingTop: "8px", borderTop: "1px solid #d8d3ca", fontSize: "8.5pt", color: "#9a9a9a", display: "flex", justifyContent: "space-between" }}>
+          <span>สร้างโดย Slipless · Restaurant Finance System</span>
+          <span>{printDate}</span>
+        </div>
       </div>
 
     </div>
