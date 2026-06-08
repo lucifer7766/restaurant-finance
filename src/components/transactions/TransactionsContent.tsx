@@ -12,7 +12,8 @@ import {
 import { formatSupabaseError } from "@/lib/supabase/errors";
 import { getCategoryLabel, formatPosNote, formatMonthLabel } from "@/lib/utils";
 import { useMonthFilter } from "@/context/MonthFilterContext";
-import { filterTransactionsByMonth, restaurantName } from "@/lib/data";
+import { filterTransactionsByMonth } from "@/lib/data";
+import { useRestaurantName } from "@/lib/restaurantSettings";
 import EditTransactionModal from "./EditTransactionModal";
 import { SwipeableRow } from "@/components/ui/SwipeableRow";
 import * as XLSX from "xlsx";
@@ -133,9 +134,12 @@ export function TransactionsContent() {
 
   const { selectedMonth } = useMonthFilter();
 
+  const [restaurantName] = useRestaurantName();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | TransactionType>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<AppTransaction | null>(null);
@@ -162,10 +166,12 @@ export function TransactionsContent() {
 
       const matchesType = typeFilter === "all" || item.type === typeFilter;
       const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
+      const matchesDateFrom = !dateFrom || item.date >= dateFrom;
+      const matchesDateTo = !dateTo || item.date <= dateTo;
 
-      return matchesSearch && matchesType && matchesCategory;
+      return matchesSearch && matchesType && matchesCategory && matchesDateFrom && matchesDateTo;
     });
-  }, [transactions, search, typeFilter, categoryFilter]);
+  }, [transactions, search, typeFilter, categoryFilter, dateFrom, dateTo]);
 
   async function handleAddTransaction() {
     const amount = Number(form.amount);
@@ -248,7 +254,7 @@ export function TransactionsContent() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${restaurantName.toLowerCase()}-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `${restaurantName.replace(/\s+/g, "-").toLowerCase()}-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -269,7 +275,7 @@ export function TransactionsContent() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
     XLSX.writeFile(
       workbook,
-      `${restaurantName.toLowerCase()}-transactions-${new Date().toISOString().slice(0, 10)}.xlsx`
+      `${restaurantName.replace(/\s+/g, "-").toLowerCase()}-transactions-${new Date().toISOString().slice(0, 10)}.xlsx`
     );
   }
 
@@ -436,6 +442,40 @@ export function TransactionsContent() {
             </option>
           ))}
         </select>
+      </div>
+
+      {/* ── Date range filter ──────────────────────────────────────────────── */}
+      <div className="metric-card px-4 py-3 rounded-2xl flex flex-wrap items-center gap-3">
+        <span className="material-symbols-outlined text-on-surface-variant text-[18px]">date_range</span>
+        <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap gap-y-2">
+          <input
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="bg-surface-container rounded-xl px-3 py-2 font-body-md text-on-surface outline-none border border-outline-variant focus:border-primary text-sm"
+          />
+          <span className="font-body-md text-on-surface-variant text-sm">ถึง</span>
+          <input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="bg-surface-container rounded-xl px-3 py-2 font-body-md text-on-surface outline-none border border-outline-variant focus:border-primary text-sm"
+          />
+        </div>
+        {(dateFrom || dateTo) && (
+          <button
+            onClick={() => { setDateFrom(""); setDateTo(""); }}
+            className="flex items-center gap-1 px-3 py-2 rounded-xl font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container transition-colors shrink-0"
+          >
+            <span className="material-symbols-outlined text-[15px]">close</span>
+            ล้างวันที่
+          </button>
+        )}
+        {!dateFrom && !dateTo && (
+          <span className="font-label-caps text-label-caps text-on-surface-variant text-xs">เลือกช่วงวันที่ (ถ้าต้องการ)</span>
+        )}
       </div>
 
       {/* ── Transactions table ─────────────────────────────────────────────── */}

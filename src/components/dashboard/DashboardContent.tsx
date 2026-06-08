@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRestaurantName } from "@/lib/restaurantSettings";
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
@@ -20,6 +21,7 @@ const THAI_MONTHS_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","�
 export function DashboardContent() {
   const { selectedMonth, availableMonths } = useMonthFilter();
   const { transactions, isLoading, error, deleteTransaction, refreshTransactions } = useTransactions();
+  const [restaurantName] = useRestaurantName();
   const [showAllTx, setShowAllTx] = useState(false);
   const [txFilter, setTxFilter] = useState<"all" | "income" | "expense">("all");
   const [editingTx, setEditingTx] = useState<Parameters<typeof EditTransactionModal>[0]["transaction"]>(null);
@@ -196,7 +198,7 @@ export function DashboardContent() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <p style={{ fontSize: "11px", fontWeight: 600, color: "rgba(255,255,255,0.65)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              ภาพรวมธุรกิจ · {monthLabel}
+              {restaurantName} · {monthLabel}
             </p>
           </div>
           <span

@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { PinSettings } from "@/components/ui/PinSettings";
+import { useRestaurantName } from "@/lib/restaurantSettings";
 
 const navItems = [
   { href: "/dashboard", label: "แดชบอร์ด", icon: "dashboard" },
@@ -22,6 +24,9 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const [restaurantName, setRestaurantName] = useRestaurantName();
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
 
   async function handleSignOut() {
     await signOut();
@@ -119,6 +124,48 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
 
         {/* User + Logout — footer */}
         <div style={{ background: "#f0ede6", borderTop: "1px solid #d8d3ca", padding: "12px" }}>
+
+          {/* ── ชื่อร้าน ── */}
+          <div className="px-3 mb-3">
+            {editingName ? (
+              <div className="flex gap-1.5">
+                <input
+                  autoFocus
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { setRestaurantName(nameInput); setEditingName(false); }
+                    if (e.key === "Escape") setEditingName(false);
+                  }}
+                  maxLength={40}
+                  className="flex-1 text-sm rounded-lg px-2 py-1.5 border border-outline-variant bg-surface outline-none focus:border-primary"
+                  placeholder="ชื่อร้านอาหาร"
+                  style={{ fontSize: "13px" }}
+                />
+                <button
+                  onClick={() => { setRestaurantName(nameInput); setEditingName(false); }}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{ background: "#115637", color: "#fff" }}
+                >
+                  บันทึก
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setNameInput(restaurantName); setEditingName(true); }}
+                className="flex items-center gap-1.5 w-full group"
+              >
+                <span className="material-symbols-outlined text-[14px]" style={{ color: "#115637" }}>storefront</span>
+                <span className="flex-1 text-left truncate" style={{ fontSize: "12px", color: "#404942", fontWeight: 600 }}>
+                  {restaurantName}
+                </span>
+                <span className="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-60 transition-opacity" style={{ color: "#404942" }}>
+                  edit
+                </span>
+              </button>
+            )}
+          </div>
+
           {user && (
             <p className="px-3 mb-2 truncate" style={{ fontSize: "11px", color: "#707972" }}>
               {user.email}

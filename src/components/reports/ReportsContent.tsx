@@ -2,6 +2,7 @@
 
 import { useMemo, useCallback, useState } from "react";
 import Link from "next/link";
+import { useRestaurantName } from "@/lib/restaurantSettings";
 import * as XLSX from "xlsx";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import { useMonthFilter } from "@/context/MonthFilterContext";
@@ -70,6 +71,7 @@ function trendDisplay(
 export function ReportsContent() {
   const { transactions, isLoading, error: loadError } = useTransactions();
   const { selectedMonth } = useMonthFilter();
+  const [restaurantName] = useRestaurantName();
   const [compareOpen, setCompareOpen] = useState(false);
   const [yearlyOpen, setYearlyOpen] = useState(false);
   const selectedYear = selectedMonth.slice(0, 4);
@@ -344,7 +346,7 @@ export function ReportsContent() {
           <span className="material-symbols-outlined text-white text-[22px]">leaderboard</span>
         </div>
         <div className="flex-1">
-          <p style={{ fontSize: "11px", fontWeight: 600, color: "#115637", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px" }}>รายงาน</p>
+          <p style={{ fontSize: "11px", fontWeight: 600, color: "#115637", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px" }}>{restaurantName}</p>
           <h2 style={{ fontFamily: "var(--font-manrope)", fontSize: "20px", fontWeight: 800, color: "#1b1c19", lineHeight: 1.2 }}>
             รายงานกำไรขาดทุน
           </h2>
