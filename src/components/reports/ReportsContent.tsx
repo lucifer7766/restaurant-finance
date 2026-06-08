@@ -316,8 +316,12 @@ export function ReportsContent() {
   }
 
   /* ── JSX ────────────────────────────────────────────────────────────────── */
+  const monthTxns = filterTransactionsByMonth(transactions, selectedMonth).slice(0, 50);
+  const printDate = new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
+
   return (
-    <div className="space-y-4">
+    <>
+    <div className="space-y-4 web-only">
 
       {loadError && (
         <div className="sand-card p-4 rounded-xl flex items-center gap-3 border-l-4 border-error">
@@ -367,7 +371,7 @@ export function ReportsContent() {
           </button>
           <button onClick={exportPDF} className="btn-secondary px-4 py-2 text-sm">
             <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
-            พิมพ์ / PDF
+            ส่งออก PDF
           </button>
         </div>
       </div>
@@ -1071,12 +1075,295 @@ export function ReportsContent() {
           </button>
           <button onClick={exportPDF} className="btn-secondary w-full">
             <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
-            พิมพ์ / บันทึก PDF
+            ส่งออก PDF
           </button>
         </div>
       </div>
 
+    </div>{/* end web-only */}
+
+    {/* ════════════════════════════════════════════════════════════════════════
+        PROFESSIONAL PRINT LAYOUT — ซ่อนบนเว็บ แสดงเฉพาะตอน print
+    ════════════════════════════════════════════════════════════════════════ */}
+    <div className="print-only" style={{ fontFamily: "'Sarabun', 'Noto Sans Thai', sans-serif", color: "#1b1c19", fontSize: "11pt", lineHeight: 1.6 }}>
+
+      {/* ── SECTION 1: Executive Summary ──────────────────────────────────── */}
+      <div style={{ marginBottom: "28px" }}>
+
+        {/* Brand header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #115637", paddingBottom: "10px", marginBottom: "18px" }}>
+          <div>
+            <div style={{ fontSize: "9pt", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#115637" }}>SLIPLESS · Restaurant Finance</div>
+            <div style={{ fontSize: "20pt", fontWeight: 800, color: "#1b1c19", lineHeight: 1.2, marginTop: "2px" }}>{restaurantName}</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: "13pt", fontWeight: 700, color: "#1b1c19" }}>รายงานกำไรขาดทุน</div>
+            <div style={{ fontSize: "10pt", color: "#707972", marginTop: "2px" }}>{formatMonthLabel(selectedMonth)}</div>
+            <div style={{ fontSize: "9pt", color: "#9a9a9a", marginTop: "1px" }}>สร้างเมื่อ {printDate}</div>
+          </div>
+        </div>
+
+        {/* KPI 4 กล่อง */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px", marginBottom: "14px" }}>
+          {[
+            { label: "รายรับรวม", display: `฿${formatMoney(income)}`, color: "#115637" },
+            { label: "รายจ่ายรวม", display: `฿${formatMoney(expense)}`, color: "#ba1a1a" },
+            { label: "กำไรสุทธิ", display: `${profit >= 0 ? "+" : "-"}฿${formatMoney(Math.abs(profit))}`, color: profit >= 0 ? "#115637" : "#ba1a1a" },
+            { label: "อัตรากำไร", display: `${margin.toFixed(1)}%`, color: margin >= 20 ? "#115637" : margin >= 10 ? "#cc8800" : "#ba1a1a" },
+          ].map((kpi) => (
+            <div key={kpi.label} style={{ border: "1px solid #d8d3ca", borderRadius: "8px", padding: "10px 12px", background: "#f7f4ef" }}>
+              <div style={{ fontSize: "8pt", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "#707972", marginBottom: "4px" }}>{kpi.label}</div>
+              <div style={{ fontSize: "15pt", fontWeight: 800, color: kpi.color }}>{kpi.display}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* % เทียบเดือนก่อน */}
+        {!growthIncome.noData && (
+          <div style={{ display: "flex", gap: "20px", marginBottom: "14px", fontSize: "9pt", color: "#707972", padding: "6px 0", borderBottom: "1px solid #ede8e1" }}>
+            <span>รายรับ <strong style={{ color: growthIncome.up ? "#115637" : "#ba1a1a" }}>{growthIncome.text}</strong></span>
+            <span>รายจ่าย <strong style={{ color: growthExpense.up ? "#ba1a1a" : "#115637" }}>{growthExpense.text}</strong></span>
+            <span>กำไร <strong style={{ color: growthProfit.up ? "#115637" : "#ba1a1a" }}>{growthProfit.text}</strong></span>
+            {!growthMargin.noData && <span>Margin <strong style={{ color: growthMargin.up ? "#115637" : "#ba1a1a" }}>{growthMargin.text}</strong></span>}
+          </div>
+        )}
+
+        {/* AI Summary */}
+        <div style={{ background: "#f0ede6", borderLeft: "3px solid #115637", padding: "12px 16px", borderRadius: "0 6px 6px 0" }}>
+          <div style={{ fontSize: "8pt", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "#115637", marginBottom: "7px" }}>สรุปภาพรวมธุรกิจ</div>
+          <div style={{ fontSize: "10pt", lineHeight: 1.8, color: "#1b1c19" }}>
+            <div>• {aiSummary.profitText}</div>
+            <div>• {aiSummary.marginText}</div>
+            <div>• {aiSummary.topExpenseText}</div>
+            <div>• {aiSummary.advice}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── SECTION 2: รายรับแยกหมวดหมู่ ─────────────────────────────────── */}
+      <div style={{ breakBefore: "page" }}>
+        <div style={{ fontSize: "12pt", fontWeight: 700, color: "#115637", borderBottom: "1px solid #d8d3ca", paddingBottom: "6px", marginBottom: "12px" }}>
+          รายรับแยกตามหมวดหมู่ · {formatMonthLabel(selectedMonth)}
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10pt", marginBottom: "16px" }}>
+          <thead>
+            <tr style={{ background: "#f0ede6" }}>
+              <th style={{ textAlign: "left", padding: "7px 10px", fontWeight: 600 }}>หมวดหมู่</th>
+              <th style={{ textAlign: "right", padding: "7px 10px", fontWeight: 600 }}>จำนวน (บาท)</th>
+              <th style={{ textAlign: "right", padding: "7px 10px", fontWeight: 600 }}>สัดส่วน</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(incomeBreak).sort((a, b) => b[1] - a[1]).map(([cat, amt], i) => (
+              <tr key={cat} style={{ background: i % 2 === 0 ? "#fff" : "#f9f7f4", borderBottom: "1px solid #ede8e1" }}>
+                <td style={{ padding: "7px 10px" }}>{cat}</td>
+                <td style={{ textAlign: "right", padding: "7px 10px", fontWeight: 600 }}>฿{formatMoney(amt)}</td>
+                <td style={{ textAlign: "right", padding: "7px 10px", color: "#707972" }}>
+                  {income > 0 ? ((amt / income) * 100).toFixed(1) + "%" : "—"}
+                </td>
+              </tr>
+            ))}
+            {Object.keys(incomeBreak).length === 0 && (
+              <tr><td colSpan={3} style={{ padding: "10px", color: "#9a9a9a", textAlign: "center" }}>ไม่มีข้อมูลรายรับเดือนนี้</td></tr>
+            )}
+            <tr style={{ borderTop: "2px solid #115637", fontWeight: 700 }}>
+              <td style={{ padding: "7px 10px" }}>รวมทั้งสิ้น</td>
+              <td style={{ textAlign: "right", padding: "7px 10px" }}>฿{formatMoney(income)}</td>
+              <td style={{ textAlign: "right", padding: "7px 10px" }}>100%</td>
+            </tr>
+          </tbody>
+        </table>
+        {/* Bar chart */}
+        <div style={{ marginTop: "4px" }}>
+          {Object.entries(incomeBreak).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => {
+            const pct = income > 0 ? (amt / income) * 100 : 0;
+            return (
+              <div key={cat} style={{ marginBottom: "7px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9pt", marginBottom: "3px" }}>
+                  <span>{cat}</span><span style={{ color: "#115637", fontWeight: 600 }}>{pct.toFixed(1)}%</span>
+                </div>
+                <div style={{ height: "7px", background: "#e8e3dc", borderRadius: "4px", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: "#115637", borderRadius: "4px" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── SECTION 3: รายจ่ายแยกหมวดหมู่ ─────────────────────────────────── */}
+      <div style={{ breakBefore: "page" }}>
+        <div style={{ fontSize: "12pt", fontWeight: 700, color: "#ba1a1a", borderBottom: "1px solid #d8d3ca", paddingBottom: "6px", marginBottom: "12px" }}>
+          รายจ่ายแยกตามหมวดหมู่ · {formatMonthLabel(selectedMonth)}
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10pt", marginBottom: "16px" }}>
+          <thead>
+            <tr style={{ background: "#f0ede6" }}>
+              <th style={{ textAlign: "left", padding: "7px 10px", fontWeight: 600 }}>หมวดหมู่</th>
+              <th style={{ textAlign: "right", padding: "7px 10px", fontWeight: 600 }}>จำนวน (บาท)</th>
+              <th style={{ textAlign: "right", padding: "7px 10px", fontWeight: 600 }}>สัดส่วน</th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.expenseBreakdown.map((e, i) => (
+              <tr key={e.category} style={{ background: i % 2 === 0 ? "#fff" : "#f9f7f4", borderBottom: "1px solid #ede8e1" }}>
+                <td style={{ padding: "7px 10px" }}>{e.category}</td>
+                <td style={{ textAlign: "right", padding: "7px 10px", fontWeight: 600 }}>฿{formatMoney(e.amount)}</td>
+                <td style={{ textAlign: "right", padding: "7px 10px", color: "#707972" }}>
+                  {expense > 0 ? ((e.amount / expense) * 100).toFixed(1) + "%" : "—"}
+                </td>
+              </tr>
+            ))}
+            {report.expenseBreakdown.length === 0 && (
+              <tr><td colSpan={3} style={{ padding: "10px", color: "#9a9a9a", textAlign: "center" }}>ไม่มีข้อมูลรายจ่ายเดือนนี้</td></tr>
+            )}
+            <tr style={{ borderTop: "2px solid #ba1a1a", fontWeight: 700 }}>
+              <td style={{ padding: "7px 10px" }}>รวมทั้งสิ้น</td>
+              <td style={{ textAlign: "right", padding: "7px 10px" }}>฿{formatMoney(expense)}</td>
+              <td style={{ textAlign: "right", padding: "7px 10px" }}>100%</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style={{ marginTop: "4px" }}>
+          {report.expenseBreakdown.map((e) => {
+            const pct = expense > 0 ? (e.amount / expense) * 100 : 0;
+            return (
+              <div key={e.category} style={{ marginBottom: "7px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9pt", marginBottom: "3px" }}>
+                  <span>{e.category}</span><span style={{ color: "#ba1a1a", fontWeight: 600 }}>{pct.toFixed(1)}%</span>
+                </div>
+                <div style={{ height: "7px", background: "#e8e3dc", borderRadius: "4px", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: "#ba1a1a", borderRadius: "4px" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── SECTION 4: วิเคราะห์ต้นทุน ───────────────────────────────────── */}
+      <div style={{ breakBefore: "page" }}>
+        <div style={{ fontSize: "12pt", fontWeight: 700, color: "#1b1c19", borderBottom: "1px solid #d8d3ca", paddingBottom: "6px", marginBottom: "14px" }}>
+          วิเคราะห์ต้นทุน · {formatMonthLabel(selectedMonth)}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+          {/* Cost structure */}
+          <div>
+            <div style={{ fontSize: "8pt", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#707972", marginBottom: "10px" }}>โครงสร้างต้นทุน</div>
+            <table style={{ width: "100%", fontSize: "10pt", borderCollapse: "collapse" }}>
+              <tbody>
+                {[
+                  { label: "รายรับ", val: `฿${formatMoney(income)}`, c: "#115637" },
+                  { label: "รายจ่ายรวม", val: `฿${formatMoney(expense)}`, c: "#ba1a1a" },
+                  { label: "ต้นทุนต่อรายรับ", val: income > 0 ? `${((expense / income) * 100).toFixed(1)}%` : "—", c: "#1b1c19" },
+                  { label: "อัตรากำไร", val: `${margin.toFixed(1)}%`, c: margin >= 20 ? "#115637" : "#ba1a1a" },
+                ].map((row) => (
+                  <tr key={row.label} style={{ borderBottom: "1px solid #ede8e1" }}>
+                    <td style={{ padding: "5px 0", color: "#707972" }}>{row.label}</td>
+                    <td style={{ textAlign: "right", fontWeight: 700, color: row.c }}>{row.val}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Top 3 cost drivers */}
+          <div>
+            <div style={{ fontSize: "8pt", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#707972", marginBottom: "10px" }}>Top 3 ค่าใช้จ่ายสูงสุด</div>
+            {report.expenseBreakdown.slice(0, 3).map((e, i) => (
+              <div key={e.category} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid #ede8e1", fontSize: "10pt" }}>
+                <span style={{ color: "#707972", marginRight: "8px", fontWeight: 700 }}>#{i + 1}</span>
+                <span style={{ flex: 1 }}>{e.category}</span>
+                <span style={{ fontWeight: 700, color: "#ba1a1a" }}>฿{formatMoney(e.amount)}</span>
+                <span style={{ color: "#9a9a9a", fontSize: "9pt", marginLeft: "8px" }}>
+                  ({expense > 0 ? ((e.amount / expense) * 100).toFixed(1) : "—"}%)
+                </span>
+              </div>
+            ))}
+            {report.expenseBreakdown.length === 0 && (
+              <p style={{ color: "#9a9a9a", fontSize: "10pt" }}>ไม่มีข้อมูลรายจ่าย</p>
+            )}
+          </div>
+        </div>
+
+        {/* พยากรณ์เดือนหน้า */}
+        {forecast.avgIncome > 0 && (
+          <div style={{ background: "#f0ede6", borderRadius: "8px", padding: "14px 16px" }}>
+            <div style={{ fontSize: "8pt", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "#115637", marginBottom: "10px" }}>
+              พยากรณ์เดือนหน้า · เฉลี่ยจาก {forecast.months} เดือนย้อนหลัง
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", fontSize: "10pt" }}>
+              <div>
+                <div style={{ color: "#707972", fontSize: "9pt", marginBottom: "2px" }}>รายรับคาดการณ์</div>
+                <div style={{ fontWeight: 700, color: "#115637" }}>฿{formatMoney(Math.round(forecast.avgIncome))}</div>
+              </div>
+              <div>
+                <div style={{ color: "#707972", fontSize: "9pt", marginBottom: "2px" }}>รายจ่ายคาดการณ์</div>
+                <div style={{ fontWeight: 700, color: "#ba1a1a" }}>฿{formatMoney(Math.round(forecast.avgExpense))}</div>
+              </div>
+              <div>
+                <div style={{ color: "#707972", fontSize: "9pt", marginBottom: "2px" }}>กำไรคาดการณ์</div>
+                <div style={{ fontWeight: 700, color: forecast.avgProfit >= 0 ? "#115637" : "#ba1a1a" }}>
+                  {forecast.avgProfit >= 0 ? "+" : ""}฿{formatMoney(Math.round(forecast.avgProfit))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── SECTION 5: รายการธุรกรรมล่าสุด ─────────────────────────────────── */}
+      <div style={{ breakBefore: "page" }}>
+        <div style={{ fontSize: "12pt", fontWeight: 700, color: "#1b1c19", borderBottom: "1px solid #d8d3ca", paddingBottom: "6px", marginBottom: "12px" }}>
+          รายการธุรกรรม · {formatMonthLabel(selectedMonth)}
+          {monthTxns.length === 50 && <span style={{ fontWeight: 400, fontSize: "9pt", color: "#9a9a9a", marginLeft: "8px" }}>(แสดง 50 รายการล่าสุด)</span>}
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9.5pt" }}>
+          <thead>
+            <tr style={{ background: "#f0ede6" }}>
+              <th style={{ textAlign: "left", padding: "6px 8px", fontWeight: 600, whiteSpace: "nowrap" }}>วันที่</th>
+              <th style={{ textAlign: "left", padding: "6px 8px", fontWeight: 600 }}>ประเภท</th>
+              <th style={{ textAlign: "left", padding: "6px 8px", fontWeight: 600 }}>หมวดหมู่</th>
+              <th style={{ textAlign: "right", padding: "6px 8px", fontWeight: 600 }}>จำนวน (บาท)</th>
+              <th style={{ textAlign: "left", padding: "6px 8px", fontWeight: 600 }}>หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {monthTxns.length === 0 && (
+              <tr><td colSpan={5} style={{ padding: "12px", color: "#9a9a9a", textAlign: "center" }}>ไม่มีรายการเดือนนี้</td></tr>
+            )}
+            {monthTxns.map((t, i) => (
+              <tr key={t.id} style={{ background: i % 2 === 0 ? "#fff" : "#f9f7f4", borderBottom: "1px solid #ede8e1" }}>
+                <td style={{ padding: "5px 8px", whiteSpace: "nowrap", color: "#707972" }}>{t.date}</td>
+                <td style={{ padding: "5px 8px" }}>
+                  <span style={{ color: t.type === "income" ? "#115637" : "#ba1a1a", fontWeight: 600 }}>
+                    {t.type === "income" ? "รายรับ" : "รายจ่าย"}
+                  </span>
+                </td>
+                <td style={{ padding: "5px 8px" }}>{t.category ?? "—"}</td>
+                <td style={{ textAlign: "right", padding: "5px 8px", fontWeight: 600, whiteSpace: "nowrap" }}>
+                  <span style={{ color: t.type === "income" ? "#115637" : "#ba1a1a" }}>
+                    {t.type === "income" ? "+" : "-"}฿{formatMoney(t.amount)}
+                  </span>
+                </td>
+                <td style={{ padding: "5px 8px", color: "#707972", maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {t.description ?? "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Footer */}
+      <div style={{ marginTop: "28px", paddingTop: "8px", borderTop: "1px solid #d8d3ca", fontSize: "8.5pt", color: "#9a9a9a", display: "flex", justifyContent: "space-between" }}>
+        <span>สร้างโดย Slipless · Restaurant Finance System</span>
+        <span>{printDate}</span>
+      </div>
+
     </div>
+    </>
   );
 }
 

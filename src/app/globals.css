@@ -219,38 +219,36 @@ body {
 }
 
 /* ─── Print / PDF styles ───────────────────────────────────────────────────── */
+
+/* hidden on screen, visible only during print */
+.print-only { display: none; }
+
 @media print {
-  /* hide nav, buttons, sidebar */
-  nav, footer, .print\:hidden,
+  /* hide everything except the professional print layout */
+  .web-only { display: none !important; }
+  .print-only { display: block !important; }
+
+  /* hide chrome UI */
+  nav, footer,
   [class*="BottomNav"], [class*="TopAppBar"], [class*="AppSidebar"] {
     display: none !important;
   }
 
   body {
     background: white !important;
-    color: black !important;
-    font-size: 12pt;
+    color: #1b1c19 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  /* flatten card backgrounds */
-  .metric-card, .sand-card, .sand-card-light {
-    background: white !important;
-    border: 1px solid #ccc !important;
-    box-shadow: none !important;
-    break-inside: avoid;
-  }
-
-  /* keep colors readable in print */
-  .text-primary { color: #1a4d2e !important; }
-  .text-error   { color: #c0392b !important; }
-
-  /* full width */
+  /* full width, no sidebar offset */
   .lg\:ml-64, [class*="ml-64"] { margin-left: 0 !important; }
   .pb-24 { padding-bottom: 0 !important; }
 
-  /* page title */
   @page {
-    margin: 16mm 12mm;
+    margin: 14mm 12mm;
     size: A4 portrait;
   }
 }
