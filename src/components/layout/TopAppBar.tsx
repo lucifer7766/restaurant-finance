@@ -9,6 +9,7 @@ const PAGE_TITLES: Record<string, string> = {
   Reports: "รายงาน",
   "Cost Analysis": "วิเคราะห์ต้นทุน",
   Transactions: "รายการทั้งหมด",
+  Exports: "ส่งออกไฟล์",
 };
 
 type TopAppBarProps = {

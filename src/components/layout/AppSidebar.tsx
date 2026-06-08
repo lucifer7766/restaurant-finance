@@ -13,6 +13,7 @@ const navItems = [
   { href: "/expense", label: "รายจ่าย", icon: "receipt_long" },
   { href: "/reports", label: "รายงานกำไร", icon: "leaderboard" },
   { href: "/cost-analysis", label: "วิเคราะห์ต้นทุน", icon: "analytics" },
+  { href: "/exports", label: "ส่งออกไฟล์", icon: "download" },
 ];
 
 type AppSidebarProps = {

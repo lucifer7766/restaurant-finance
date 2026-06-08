@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRestaurantName } from "@/lib/restaurantSettings";
-import * as XLSX from "xlsx";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import {
@@ -191,115 +190,14 @@ export function ReportsContent() {
     return { profitText, marginText, topExpenseText, advice };
   }, [report, income, expense, profit, margin]);
 
-  /* ── Export helpers ─────────────────────────────────────────────────────── */
-
-  const exportCSV = useCallback(() => {
-    const rows = [
-      ["Report", "Amount"],
-      ["Income", income],
-      ["Expense", expense],
-      ["Profit", profit],
-      ["Margin (%)", margin.toFixed(2)],
-      [],
-      ["AI Summary"],
-      [aiSummary.profitText],
-      [aiSummary.marginText],
-      [aiSummary.topExpenseText],
-      [aiSummary.advice],
-      [],
-      ["Expense Category", "Amount"],
-      ...report.expenseBreakdown.map((item) => [item.category, item.amount]),
-    ];
-    const csvContent = rows.map((row) => row.join(",")).join("\n");
-    const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `reports-${selectedMonth}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }, [income, expense, profit, margin, aiSummary, report, selectedMonth]);
-
-  const exportExcel = useCallback(() => {
-    const summarySheet = [
-      ["Report", "Amount"],
-      ["Income", income],
-      ["Expense", expense],
-      ["Profit", profit],
-      ["Margin (%)", Number(margin.toFixed(2))],
-      [],
-      ["AI Summary"],
-      [aiSummary.profitText],
-      [aiSummary.marginText],
-      [aiSummary.topExpenseText],
-      [aiSummary.advice],
-    ];
-    const expenseSheet = [
-      ["Expense Category", "Amount"],
-      ...report.expenseBreakdown.map((item) => [item.category, item.amount]),
-    ];
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summarySheet), "Summary");
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(expenseSheet), "Expense Breakdown");
-    XLSX.writeFile(workbook, `reports-${selectedMonth}.xlsx`);
-  }, [income, expense, profit, margin, aiSummary, report, selectedMonth]);
-
-  const exportPDF = useCallback(() => {
-    window.print();
-  }, []);
-
-  /* ── Export สรุปนักบัญชี (Excel ครบวงจร) ── */
-  const exportAccountant = useCallback(() => {
-    const wb = XLSX.utils.book_new();
-
-    // Sheet 1: สรุปรายเดือน
-    const summaryRows = [
-      ["สรุปรายงานการเงิน", `${formatMonthLabel(selectedMonth)}`],
-      [],
-      ["รายการ", "จำนวนเงิน (บาท)"],
-      ["รายรับรวม", income],
-      ["รายจ่ายรวม", expense],
-      ["กำไรสุทธิ", profit],
-      ["อัตรากำไร (%)", Number(margin.toFixed(2))],
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryRows), "สรุปเดือนนี้");
-
-    // Sheet 2: รายจ่ายแยกหมวด
-    const expRows = [
-      ["หมวดหมู่", "จำนวนเงิน (บาท)", "สัดส่วน (%)"],
-      ...report.expenseBreakdown.map(e => [
-        e.category,
-        e.amount,
-        expense > 0 ? Number(((e.amount / expense) * 100).toFixed(2)) : 0,
-      ]),
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(expRows), "รายจ่ายแยกหมวด");
-
-    // Sheet 3: รายการทั้งหมดในเดือน
-    const monthTxns = filterTransactionsByMonth(transactions, selectedMonth);
-    const txRows = [
-      ["วันที่", "ประเภท", "หมวดหมู่", "จำนวนเงิน (บาท)", "หมายเหตุ"],
-      ...monthTxns.map(t => [
-        t.date,
-        t.type === "income" ? "รายรับ" : "รายจ่าย",
-        getCategoryLabel(t.category),
-        t.amount,
-        t.description ?? "",
-      ]),
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(txRows), "รายการทั้งหมด");
-
-    // Sheet 4: ภาพรวมรายปี
-    const yrRows = [
-      ["เดือน", "รายรับ", "รายจ่าย", "กำไรสุทธิ"],
-      ...yearlyData.map(d => [d.label, d.income, d.expense, d.profit]),
-      [],
-      ["รวมทั้งปี", yearlyTotals.income, yearlyTotals.expense, yearlyTotals.profit],
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(yrRows), `ภาพรวมปี ${selectedYear}`);
-
-    XLSX.writeFile(wb, `รายงานการเงิน-${selectedMonth}.xlsx`);
-  }, [income, expense, profit, margin, report, transactions, selectedMonth, yearlyData, yearlyTotals, selectedYear]);
+  /* ── Auto-print (triggered from /exports PDF card) ─────────────────────── */
+  useEffect(() => {
+    if (typeof window === "undefined" || isLoading) return;
+    if (localStorage.getItem("slipless_trigger_print") !== "1") return;
+    localStorage.removeItem("slipless_trigger_print");
+    const t = setTimeout(() => window.print(), 400);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   /* ── Loading skeleton ───────────────────────────────────────────────────── */
   if (isLoading) {
@@ -363,17 +261,10 @@ export function ReportsContent() {
             )}
           </p>
         </div>
-        {/* Export buttons — desktop only */}
-        <div className="hidden md:flex flex-col gap-2 shrink-0 print:hidden">
-          <button onClick={exportAccountant} className="btn-primary px-4 py-2 text-sm">
-            <span className="material-symbols-outlined text-[16px]">table_view</span>
-            Export (.xlsx)
-          </button>
-          <button onClick={exportPDF} className="btn-secondary px-4 py-2 text-sm">
-            <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
-            ส่งออก PDF
-          </button>
-        </div>
+        <Link href="/exports" className="hidden md:flex items-center gap-1.5 shrink-0 print:hidden" style={{ fontSize: "12px", color: "#707972" }}>
+          <span className="material-symbols-outlined text-[15px]">download</span>
+          ส่งออกไฟล์
+        </Link>
       </div>
 
       {/* ── KPI Summary ─────────────────────────────────────── */}
@@ -832,26 +723,10 @@ export function ReportsContent() {
 
       {/* ── รายจ่ายแยกตามหมวดหมู่ ──────────────────────────── */}
       <div className="metric-card rounded-2xl overflow-hidden">
-        <div className="p-7 pb-0 flex items-center justify-between">
+        <div className="p-7 pb-0">
           <h3 className="font-headline-md text-headline-md text-on-surface">
             รายจ่ายแยกตามหมวดหมู่
           </h3>
-          <div className="flex gap-2 print:hidden">
-            <button
-              onClick={exportCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container transition-all"
-            >
-              <span className="material-symbols-outlined text-[15px]">download</span>
-              CSV
-            </button>
-            <button
-              onClick={exportExcel}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary font-label-caps text-label-caps text-primary hover:bg-primary-container/20 transition-all"
-            >
-              <span className="material-symbols-outlined text-[15px]">table_view</span>
-              Excel
-            </button>
-          </div>
         </div>
         {report.expenseBreakdown.length === 0 ? (
           <p className="px-8 py-10 font-body-md text-on-surface-variant text-center">
@@ -1065,19 +940,13 @@ export function ReportsContent() {
       </div>
 
 
-      {/* ── Export Section — mobile only ───────────────────── */}
+      {/* ── Link to exports center — mobile only ───────────── */}
       <div className="md:hidden metric-card p-5 rounded-2xl print:hidden">
-        <p className="font-label-caps text-label-caps text-on-surface-variant mb-3">ส่งออกรายงาน</p>
-        <div className="flex flex-col gap-3">
-          <button onClick={exportAccountant} className="btn-primary w-full">
-            <span className="material-symbols-outlined text-[18px]">table_view</span>
-            Export สรุปนักบัญชี (.xlsx)
-          </button>
-          <button onClick={exportPDF} className="btn-secondary w-full">
-            <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
-            ส่งออก PDF
-          </button>
-        </div>
+        <p className="font-label-caps text-label-caps text-on-surface-variant mb-3">ส่งออกไฟล์</p>
+        <Link href="/exports" className="btn-primary w-full">
+          <span className="material-symbols-outlined text-[18px]">download</span>
+          ไปยังหน้าส่งออกไฟล์
+        </Link>
       </div>
 
     </div>{/* end web-only */}
