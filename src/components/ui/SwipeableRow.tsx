@@ -118,9 +118,8 @@ export function SwipeableRow({
         className={`
           absolute inset-y-0 right-0 flex items-center
           transition-opacity duration-200
-          /* Desktop: show on hover */
           opacity-0 group-hover:opacity-100
-          /* Mobile: always visible when swiped open */
+          lg:z-10
           ${isOpen ? "opacity-100" : ""}
         `}
         style={{ width: ACTION_WIDTH }}
