@@ -55,7 +55,6 @@ export function ReceiptScanModal({ open, onClose, onConfirm, initialData }: Prop
     const _date = initialData?.date ?? TODAY;
     const _cat = initialData?.category ?? "อื่นๆ";
     const _note = initialData?.note ?? "";
-    console.log("[OCR_RESULT_TO_MODAL]", { _amt, _date, _cat, _note });
     setAmount(_amt);
     setDate(_date);
     setCategory(_cat);
@@ -67,7 +66,6 @@ export function ReceiptScanModal({ open, onClose, onConfirm, initialData }: Prop
 
   function handleConfirm() {
     const amt = Number(amount);
-    console.log("[modal] confirm pressed — amount:", amt, "date:", date, "category:", category);
     if (!amt || amt <= 0) { setError("กรุณากรอกจำนวนเงิน"); return; }
     if (!date) { setError("กรุณาเลือกวันที่"); return; }
     setError(null);

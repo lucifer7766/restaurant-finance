@@ -252,8 +252,6 @@ export async function POST(req: NextRequest) {
 
     /* 4. Parse OCR response */
     const ocrData = await ocrRes.json();
-    console.log("OCR.Space raw:", JSON.stringify(ocrData).slice(0, 500));
-
     if (ocrData.IsErroredOnProcessing) {
       console.error("OCR.Space processing error:", ocrData.ErrorMessage);
       return NextResponse.json(FALLBACK, { status: 200 });
@@ -283,7 +281,6 @@ export async function POST(req: NextRequest) {
       confidence,
     };
 
-    console.log("scan-receipt result:", JSON.stringify(result));
     return NextResponse.json(result, { status: 200 });
 
   } catch (err) {
