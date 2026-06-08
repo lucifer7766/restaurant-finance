@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { useMonthFilter } from "@/context/MonthFilterContext";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
@@ -161,6 +162,33 @@ export function DashboardContent() {
 
   return (
     <div className="space-y-4">
+
+      {/* ── ONBOARDING CARD (เมื่อไม่มีข้อมูลเลย) ─────────── */}
+      {transactions.length === 0 && (
+        <div className="metric-card rounded-2xl p-6 flex flex-col items-center gap-5 text-center">
+          <div className="w-14 h-14 bg-primary-container rounded-2xl flex items-center justify-center">
+            <span className="material-symbols-outlined text-on-primary-container text-[28px]">storefront</span>
+          </div>
+          <div>
+            <h3 className="font-headline-md text-headline-md text-on-surface mb-1">ยังไม่มีข้อมูลธุรกิจ</h3>
+            <p className="font-body-md text-on-surface-variant">เริ่มต้นด้วยการบันทึกรายรับ–รายจ่าย หรืออัปโหลดรายงาน POS</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
+            <Link href="/income/new" className="btn-primary flex-1 text-center text-sm py-2.5">
+              <span className="material-symbols-outlined text-[16px]">add_circle</span>
+              เพิ่มรายรับ
+            </Link>
+            <Link href="/expense/new" className="btn-secondary flex-1 text-center text-sm py-2.5">
+              <span className="material-symbols-outlined text-[16px]">remove_circle</span>
+              เพิ่มรายจ่าย
+            </Link>
+          </div>
+          <Link href="/income?pos=1" className="font-label-caps text-label-caps text-primary hover:opacity-80 transition-opacity flex items-center gap-1">
+            <span className="material-symbols-outlined text-[14px]">upload_file</span>
+            อัปโหลดรายงาน POS
+          </Link>
+        </div>
+      )}
 
       {/* ── HERO SECTION ───────────────────────────────────── */}
       <div className="card-hero rounded-2xl p-6">
@@ -528,7 +556,19 @@ export function DashboardContent() {
         )}
 
         {selectedMonthTransactions.length === 0 ? (
-          <p className="px-7 py-10 text-center font-body-md text-on-surface-variant">ไม่มีรายการใน{monthLabel}</p>
+          <div className="px-6 py-8 flex flex-col items-center gap-3 text-center">
+            <p className="font-body-md text-on-surface-variant">ไม่มีรายการใน{monthLabel}</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link href="/income/new" className="btn-primary px-4 py-2 text-sm">
+                <span className="material-symbols-outlined text-[15px]">add_circle</span>
+                เพิ่มรายรับ
+              </Link>
+              <Link href="/expense/new" className="btn-secondary px-4 py-2 text-sm">
+                <span className="material-symbols-outlined text-[15px]">remove_circle</span>
+                เพิ่มรายจ่าย
+              </Link>
+            </div>
+          </div>
         ) : (
           <div className="mt-4 divide-y divide-surface-container-low">
             {(showAllTx

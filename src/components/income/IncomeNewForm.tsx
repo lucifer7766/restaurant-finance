@@ -43,6 +43,7 @@ export function IncomeNewForm() {
     if (!category) { setError("เลือกหมวดหมู่ก่อน"); return; }
     if (!amt || amt <= 0) { setError("กรอกจำนวนเงินให้ถูกต้อง"); return; }
     if (!date) { setError("เลือกวันที่ก่อน"); return; }
+    if (date > today) { setError("วันที่ต้องไม่เกินวันนี้"); return; }
 
     setError(null);
     setSaving(true);
@@ -157,6 +158,7 @@ export function IncomeNewForm() {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                max={today}
                 className="w-full bg-surface-container rounded-xl px-4 py-3 font-body-md text-on-surface outline-none border border-outline-variant focus:border-primary"
               />
               <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">

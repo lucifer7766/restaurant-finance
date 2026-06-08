@@ -7,6 +7,7 @@ import { useTransactions } from "@/components/transactions/TransactionsContent";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import { PosImportModal, type PosGroup, type PaymentBreakdown } from "@/components/income/PosImportModal";
 import { PosImportHistory, EditBatchModal, DeleteConfirmModal, type ImportBatch } from "@/components/income/PosImportHistory";
+import { RecurringIncomePanel } from "@/components/income/RecurringIncomePanel";
 import { updateTransaction, deleteTransaction as deleteTransactionFromSupabase } from "@/lib/supabase/transactions";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -264,6 +265,17 @@ export function IncomeContent() {
           อัปโหลดรายงาน POS
         </button>
       </div>
+
+      <RecurringIncomePanel
+        onApply={async (templates) => {
+          const today = new Date().toISOString().slice(0, 10);
+          for (const t of templates) {
+            await addTransaction({ date: today, type: "income", category: t.category, amount: t.amount, note: t.note || `รายรับประจำ — ${t.category}` });
+          }
+          await refreshTransactions();
+        }}
+      />
+
       {/* ── เปรียบเทียบเดือน ── */}
       <div className="metric-card rounded-2xl overflow-hidden">
         <button onClick={() => setCmpOpen(v => !v)} className="w-full p-6 flex items-center justify-between text-left">
@@ -528,7 +540,14 @@ export function IncomeContent() {
         {isLoading ? (
           <p className="px-6 py-10 text-center font-body-md text-on-surface-variant">กำลังโหลด...</p>
         ) : monthIncome.length === 0 ? (
-          <p className="px-6 py-10 text-center font-body-md text-on-surface-variant">ไม่มีรายรับใน{monthLabel}</p>
+          <div className="px-6 py-10 flex flex-col items-center gap-4 text-center">
+            <span className="material-symbols-outlined text-on-surface-variant text-[40px]">receipt_long</span>
+            <p className="font-body-md text-on-surface-variant">ยังไม่มีรายรับใน{monthLabel}</p>
+            <Link href="/income/new" className="btn-primary px-6 py-2.5 text-sm">
+              <span className="material-symbols-outlined text-[16px]">add_circle</span>
+              เพิ่มรายรับ
+            </Link>
+          </div>
         ) : !showAll ? (
           /* ── Recent (no edit/delete) ── */
           <div className="mt-4 divide-y divide-surface-container-low">

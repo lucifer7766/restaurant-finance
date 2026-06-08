@@ -45,6 +45,7 @@ export function ExpenseContent() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [scanning, setScanning] = useState(false);
   const [slipScanning, setSlipScanning] = useState(false);
+  const [slipScanError, setSlipScanError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [editingTx, setEditingTx] = useState<Parameters<typeof EditTransactionModal>[0]["transaction"]>(null);
@@ -170,6 +171,7 @@ export function ExpenseContent() {
 
   async function handleSlipFile(file: File) {
     setSlipScanning(true);
+    setSlipScanError(null);
     try {
       const compressed = await compressImage(file);
       const res = await fetch("/api/scan-slip", {
@@ -185,7 +187,10 @@ export function ExpenseContent() {
       params.set("note", data.note ?? "จากสลิปธนาคาร");
       router.push(`/expense/new?${params.toString()}`);
     } catch {
-      router.push("/expense/new?source=slip&category=วัตถุดิบ&note=จากสลิปธนาคาร");
+      setSlipScanError("อ่านข้อมูลจากรูปไม่สำเร็จ กรุณากรอกข้อมูลเอง");
+      setTimeout(() => {
+        router.push("/expense/new?source=slip&category=วัตถุดิบ&note=จากสลิปธนาคาร");
+      }, 2500);
     } finally {
       setSlipScanning(false);
       if (slipFileRef.current) slipFileRef.current.value = "";
@@ -303,11 +308,18 @@ export function ExpenseContent() {
           className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlipFile(f); }}
         />
-        <span className="material-symbols-outlined text-[18px]">
-          {slipScanning ? "hourglass_top" : "account_balance"}
+        <span className={`material-symbols-outlined text-[18px] ${slipScanning ? "animate-spin" : ""}`}>
+          {slipScanning ? "autorenew" : "account_balance"}
         </span>
-        {slipScanning ? "กำลังอ่านสลิป..." : "สแกนสลิปธนาคาร"}
+        {slipScanning ? "กำลังอ่านข้อมูลจากรูป..." : "สแกนสลิปธนาคาร"}
       </label>
+
+      {slipScanError && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-error-container rounded-xl">
+          <span className="material-symbols-outlined text-error text-[18px] shrink-0">error_outline</span>
+          <p className="font-body-md text-on-error-container">{slipScanError}</p>
+        </div>
+      )}
 
       {/* ── เปรียบเทียบเดือน ── */}
       <div className="metric-card rounded-2xl overflow-hidden">
@@ -578,7 +590,21 @@ export function ExpenseContent() {
         {isLoading ? (
           <p className="px-6 py-10 text-center font-body-md text-on-surface-variant">กำลังโหลด...</p>
         ) : monthExpenses.length === 0 ? (
-          <p className="px-6 py-10 text-center font-body-md text-on-surface-variant">ไม่มีรายจ่ายใน{monthLabel}</p>
+          <div className="px-6 py-10 flex flex-col items-center gap-4 text-center">
+            <span className="material-symbols-outlined text-on-surface-variant text-[40px]">receipt</span>
+            <p className="font-body-md text-on-surface-variant">ยังไม่มีรายจ่ายใน{monthLabel}</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link href="/expense/new" className="btn-primary px-5 py-2.5 text-sm">
+                <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                เพิ่มรายจ่าย
+              </Link>
+              <label className="btn-secondary px-5 py-2.5 text-sm cursor-pointer">
+                <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReceiptFile(f); }} />
+                <span className="material-symbols-outlined text-[16px]">photo_camera</span>
+                สแกนใบเสร็จ
+              </label>
+            </div>
+          </div>
         ) : !showAll ? (
           /* ── Recent (no edit/delete) ── */
           <>

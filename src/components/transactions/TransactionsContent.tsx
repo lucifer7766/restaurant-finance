@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { RecentTransaction } from "@/lib/data";
 import {
   deleteTransaction as deleteTransactionFromSupabase,
@@ -444,8 +445,19 @@ export function TransactionsContent() {
             กำลังโหลด...
           </div>
         ) : filteredTransactions.length === 0 ? (
-          <div className="p-10 text-center font-body-md text-on-surface-variant">
-            ไม่พบรายการ
+          <div className="px-6 py-10 flex flex-col items-center gap-4 text-center">
+            <span className="material-symbols-outlined text-on-surface-variant text-[40px]">manage_search</span>
+            <p className="font-body-md text-on-surface-variant">ยังไม่มีรายการธุรกรรม</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link href="/income/new" className="btn-primary px-5 py-2.5 text-sm">
+                <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                เพิ่มรายรับ
+              </Link>
+              <Link href="/expense/new" className="btn-secondary px-5 py-2.5 text-sm">
+                <span className="material-symbols-outlined text-[16px]">remove_circle</span>
+                เพิ่มรายจ่าย
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="divide-y divide-surface-container-low">

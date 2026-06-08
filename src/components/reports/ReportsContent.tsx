@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback, useState } from "react";
+import Link from "next/link";
 import * as XLSX from "xlsx";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
 import { useMonthFilter } from "@/context/MonthFilterContext";
@@ -320,6 +321,20 @@ export function ReportsContent() {
         <div className="sand-card p-4 rounded-xl flex items-center gap-3 border-l-4 border-error">
           <span className="material-symbols-outlined text-error">error</span>
           <p className="font-body-md text-on-surface">{loadError}</p>
+        </div>
+      )}
+
+      {!loadError && report.totalIncome === 0 && report.totalExpenses === 0 && (
+        <div className="metric-card rounded-2xl p-6 flex flex-col items-center gap-4 text-center">
+          <span className="material-symbols-outlined text-on-surface-variant text-[40px]">bar_chart</span>
+          <div>
+            <p className="font-headline-md text-headline-md text-on-surface mb-1">ยังไม่มีข้อมูลเพียงพอสำหรับสร้างรายงาน</p>
+            <p className="font-body-md text-on-surface-variant">บันทึกรายรับ–รายจ่ายก่อน แล้วรายงานจะปรากฏที่นี่</p>
+          </div>
+          <Link href="/income/new" className="btn-primary px-6 py-2.5 text-sm">
+            <span className="material-symbols-outlined text-[16px]">add_circle</span>
+            เพิ่มข้อมูลแรก
+          </Link>
         </div>
       )}
 

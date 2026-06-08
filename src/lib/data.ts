@@ -22,7 +22,7 @@ export type RecentTransaction = {
   date: string;
 };
 
-export const restaurantName = "PLU";
+export const restaurantName = "Slipless";
 
 const monthNames = [
   "Jan",

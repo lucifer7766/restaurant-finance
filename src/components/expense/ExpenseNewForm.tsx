@@ -38,6 +38,7 @@ export function ExpenseNewForm() {
     if (!amt || amt <= 0) { setError("กรอกจำนวนเงินให้ถูกต้อง"); return; }
 
     const saveDate = date || new Date().toISOString().slice(0, 10);
+    if (saveDate > new Date().toISOString().slice(0, 10)) { setError("วันที่ต้องไม่เกินวันนี้"); return; }
     setError(null);
     setSaving(true);
     try {
@@ -151,7 +152,7 @@ export function ExpenseNewForm() {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                placeholder="mm/dd/yyyy"
+                max={new Date().toISOString().slice(0, 10)}
                 className="w-full bg-surface-container rounded-xl px-4 py-3 font-body-md text-on-surface outline-none border border-outline-variant focus:border-primary"
               />
               <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">
