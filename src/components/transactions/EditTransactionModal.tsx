@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { updateTransaction } from "@/lib/supabase/transactions";
+import { DEFAULT_VAT_RATE } from "@/lib/tax";
 
 type Transaction = {
   id: string;
@@ -11,6 +12,7 @@ type Transaction = {
   amount: number;
   note: string;
   created_at?: string;
+  taxRate?: number;
 };
 
 type Props = {
@@ -50,6 +52,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
     note: "",
   });
   const [paymentChannel, setPaymentChannel] = useState("เงินสด");
+  const [taxRate, setTaxRate] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -61,6 +64,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
           ? parseIncomeNote(transaction.note ?? "")
           : { paymentChannel: "เงินสด", actualNote: transaction.note ?? "" };
       setPaymentChannel(ch);
+      setTaxRate(transaction.taxRate ?? 0);
       setForm({
         date: transaction.date,
         type: transaction.type,
@@ -106,6 +110,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
         category: form.category,
         amount: parsedAmount,
         note: savedNote,
+        taxRate,
       });
 
       onSaved();
@@ -258,6 +263,24 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
               />
             </div>
           </div>
+
+          {!isPos && (
+            <div>
+              <label className="block font-label-caps text-label-caps text-on-surface-variant mb-2">ภาษีมูลค่าเพิ่ม</label>
+              <div className="flex gap-2">
+                {[0, DEFAULT_VAT_RATE].map((rate) => (
+                  <button
+                    key={rate}
+                    type="button"
+                    onClick={() => setTaxRate(rate)}
+                    className={`flex-1 py-2.5 rounded-xl border font-body-md ${taxRate === rate ? "border-primary bg-primary-container text-on-primary-container" : "border-outline-variant text-on-surface-variant"}`}
+                  >
+                    {rate === 0 ? "ไม่มี VAT" : `รวม VAT ${rate}%`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block font-label-caps text-label-caps text-on-surface-variant mb-2">
