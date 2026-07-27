@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
+import { calculateIncludedTax, DEFAULT_VAT_RATE } from "@/lib/tax";
 
 // BUG-006: ใช้ชื่อภาษาไทยล้วน ตรงกับข้อมูลเดิมใน DB
 const EXPENSE_CATEGORIES = [
@@ -27,10 +28,12 @@ export function ExpenseNewForm() {
   const [date, setDate] = useState(searchParams.get("date") ?? new Date().toISOString().slice(0, 10));
   const [payStatus, setPayStatus] = useState<"paid" | "pending">("paid");
   const [note, setNote] = useState(searchParams.get("note") ?? "");
+  const [taxRate, setTaxRate] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const taxPreview = calculateIncludedTax(Number(amount), taxRate);
 
   async function handleSave() {
     const amt = Number(amount);
@@ -47,6 +50,7 @@ export function ExpenseNewForm() {
         type: "expense",
         category,
         amount: amt,
+        taxRate,
         note: (payStatus === "pending" ? "[ค้างชำระ] " : "") + note,
       } as Parameters<typeof addTransaction>[0]);
       // BUG-007: setSuccess หลัง await สำเร็จ แล้ว redirect ทันที
@@ -140,6 +144,32 @@ export function ExpenseNewForm() {
                 expand_more
               </span>
             </div>
+          </div>
+
+          {/* Date */}
+          <div>
+            <label className="block font-label-caps text-label-caps text-on-surface-variant mb-3">ภาษีมูลค่าเพิ่ม</label>
+            <div className="flex gap-3">
+              {[0, DEFAULT_VAT_RATE].map((rate) => (
+                <button
+                  key={rate}
+                  type="button"
+                  onClick={() => setTaxRate(rate)}
+                  className={`flex-1 py-3 rounded-xl border-2 font-body-md transition-all ${
+                    taxRate === rate
+                      ? "border-primary bg-primary-container text-on-primary-container"
+                      : "border-outline-variant text-on-surface-variant hover:border-primary/50"
+                  }`}
+                >
+                  {rate === 0 ? "ไม่มี VAT / เครดิตไม่ได้" : `รวม VAT ${rate}%`}
+                </button>
+              ))}
+            </div>
+            {taxRate > 0 && amount && (
+              <p className="mt-2 font-body-sm text-on-surface-variant">
+                ยอดก่อน VAT ฿{taxPreview.taxableAmount.toLocaleString("th-TH", { minimumFractionDigits: 2 })} · ภาษีซื้อ ฿{taxPreview.taxAmount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+              </p>
+            )}
           </div>
 
           {/* Date */}

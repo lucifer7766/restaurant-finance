@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTransactions } from "@/components/transactions/TransactionsContent";
+import { calculateIncludedTax, DEFAULT_VAT_RATE } from "@/lib/tax";
 
 const INCOME_CATEGORIES = [
   { key: "ยอดขายอาหาร", icon: "restaurant" },
@@ -28,6 +29,7 @@ export function IncomeNewForm() {
   const [paymentChannel, setPaymentChannel] = useState("เงินสด (Cash)");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState("");
+  const [taxRate, setTaxRate] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -37,6 +39,7 @@ export function IncomeNewForm() {
   const todayIncomeTxns = transactions.filter((t) => t.type === "income" && t.date === today);
   const todayIncomeTotal = todayIncomeTxns.reduce((s, t) => s + t.amount, 0);
   const todayCount = todayIncomeTxns.length;
+  const taxPreview = calculateIncludedTax(Number(amount), taxRate);
 
   async function handleSave() {
     const amt = Number(amount);
@@ -54,6 +57,7 @@ export function IncomeNewForm() {
         type: "income",
         category,
         amount: amt,
+        taxRate,
         note: paymentChannel + (note ? ` — ${note}` : ""),
       } as Parameters<typeof addTransaction>[0]);
       setTimeout(() => router.push("/income"), 1200);
@@ -148,6 +152,32 @@ export function IncomeNewForm() {
                 expand_more
               </span>
             </div>
+          </div>
+
+          {/* Date */}
+          <div>
+            <label className="block font-label-caps text-label-caps text-on-surface-variant mb-3">ภาษีมูลค่าเพิ่ม</label>
+            <div className="flex gap-3">
+              {[0, DEFAULT_VAT_RATE].map((rate) => (
+                <button
+                  key={rate}
+                  type="button"
+                  onClick={() => setTaxRate(rate)}
+                  className={`flex-1 py-3 rounded-xl border-2 font-body-md transition-all ${
+                    taxRate === rate
+                      ? "border-primary bg-primary-container text-on-primary-container"
+                      : "border-outline-variant text-on-surface-variant hover:border-primary/50"
+                  }`}
+                >
+                  {rate === 0 ? "ไม่มี VAT" : `รวม VAT ${rate}%`}
+                </button>
+              ))}
+            </div>
+            {taxRate > 0 && amount && (
+              <p className="mt-2 font-body-sm text-on-surface-variant">
+                ยอดก่อน VAT ฿{taxPreview.taxableAmount.toLocaleString("th-TH", { minimumFractionDigits: 2 })} · VAT ฿{taxPreview.taxAmount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+              </p>
+            )}
           </div>
 
           {/* Date */}

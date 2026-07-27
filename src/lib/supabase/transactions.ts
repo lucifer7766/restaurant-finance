@@ -9,6 +9,8 @@ export type DbTransaction = {
   category: string;
   amount: number;
   note: string | null;
+  tax_rate: number | null;
+  tax_amount: number | null;
   created_at: string;
 };
 
@@ -18,6 +20,7 @@ export type NewTransaction = {
   category: string;
   amount: number;
   note: string;
+  taxRate?: number;
 };
 
 type InsertPayload = {
@@ -26,6 +29,8 @@ type InsertPayload = {
   category: string;
   amount: number;
   note: string | null;
+  tax_rate: number;
+  tax_amount: number;
 };
 
 const TYPE_VALUES = {
@@ -69,6 +74,15 @@ function prepareInsertPayload(transaction: NewTransaction): InsertPayload {
   }
 
   const note = transaction.note.trim();
+  const taxRate = Number(transaction.taxRate ?? 0);
+
+  if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) {
+    throw new Error("Tax rate must be between 0 and 100.");
+  }
+
+  const taxAmount = taxRate === 0
+    ? 0
+    : Number((amount * taxRate / (100 + taxRate)).toFixed(2));
 
   return {
     date: normalizeDate(transaction.date),
@@ -76,6 +90,8 @@ function prepareInsertPayload(transaction: NewTransaction): InsertPayload {
     category,
     amount,
     note: note.length > 0 ? note : null,
+    tax_rate: taxRate,
+    tax_amount: taxAmount,
   };
 }
 
@@ -87,6 +103,8 @@ function mapDbTransaction(row: DbTransaction): RecentTransaction {
     category: row.category,
     amount: Number(row.amount),
     description: row.note ?? "",
+    taxRate: Number(row.tax_rate ?? 0),
+    taxAmount: Number(row.tax_amount ?? 0),
   };
 }
 
@@ -95,7 +113,7 @@ export async function fetchTransactions(): Promise<RecentTransaction[]> {
 
   const { data, error } = await supabase
     .from("transactions")
-    .select("id, date, type, category, amount, note, created_at")
+    .select("id, date, type, category, amount, note, tax_rate, tax_amount, created_at")
     .order("date", { ascending: false });
 
   if (error) {
@@ -120,10 +138,24 @@ export async function updateTransaction(
   transaction: Partial<NewTransaction>
 ) {
   const supabase = getSupabaseClient();
+  const { taxRate, ...updates } = transaction;
+  const payload: Record<string, string | number | null | undefined> = updates;
+
+  if (taxRate !== undefined) {
+    const rate = Number(taxRate);
+    const amount = Number(transaction.amount);
+
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100 || !Number.isFinite(amount) || amount <= 0) {
+      throw new Error("Invalid amount or VAT rate.");
+    }
+
+    payload.tax_rate = rate;
+    payload.tax_amount = rate === 0 ? 0 : Number((amount * rate / (100 + rate)).toFixed(2));
+  }
 
   const { error } = await supabase
     .from("transactions")
-    .update(transaction)
+    .update(payload)
     .eq("id", id);
 
   if (error) {

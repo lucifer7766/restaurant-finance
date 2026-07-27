@@ -20,6 +20,8 @@ export type RecentTransaction = {
   amount: number;
   type: "income" | "expense";
   date: string;
+  taxRate?: number;
+  taxAmount?: number;
 };
 
 export const restaurantName = "Slipless";

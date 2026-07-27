@@ -12,6 +12,7 @@ const navItems = [
   { href: "/income", label: "รายรับ", icon: "payments" },
   { href: "/expense", label: "รายจ่าย", icon: "receipt_long" },
   { href: "/reports", label: "รายงานกำไร", icon: "leaderboard" },
+  { href: "/tax", label: "ภาษี VAT", icon: "receipt_long" },
   { href: "/cost-analysis", label: "วิเคราะห์ต้นทุน", icon: "analytics" },
   { href: "/exports", label: "ส่งออกไฟล์", icon: "download" },
 ];

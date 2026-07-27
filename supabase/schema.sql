@@ -10,6 +10,11 @@ create table if not exists public.transactions (
   created_at timestamptz not null default now()
 );
 
+-- Run on an existing database as well. `amount` remains the total including VAT.
+alter table public.transactions
+  add column if not exists tax_rate numeric(5, 2) not null default 0 check (tax_rate between 0 and 100),
+  add column if not exists tax_amount numeric(12, 2) not null default 0 check (tax_amount >= 0);
+
 alter table public.transactions enable row level security;
 
 create policy "Allow public read access"

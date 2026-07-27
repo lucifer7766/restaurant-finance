@@ -8,7 +8,7 @@ const navItems = [
   { href: "/income", label: "รายรับ", icon: "payments" },
   { href: "/expense", label: "รายจ่าย", icon: "receipt_long" },
   { href: "/reports", label: "รายงาน", icon: "leaderboard" },
-  { href: "/cost-analysis", label: "ต้นทุน", icon: "analytics" },
+  { href: "/tax", label: "ภาษี", icon: "receipt_long" },
 ];
 
 export function BottomNav() {
